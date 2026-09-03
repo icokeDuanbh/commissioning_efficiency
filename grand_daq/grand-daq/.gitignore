@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+build/
+cmake-build-*/
+.idea/
+.vscode/
+*.o
+*.a
+*.so
+*.exe
+*.log
+**/logs/
+Testing/Temporary/

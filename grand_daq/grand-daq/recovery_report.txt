@@ -1,0 +1,177 @@
+Cursor transcript recovery report
+Target: /data/home/grand/gumh/grand-cs-daq/new-cs-daq-v1.0/grand-daq-rollback/grand-daq
+
+OK: 128
+SKIPPED: 12
+FAILED: 14
+
+=== OK ===
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:11 strreplace ui/package.json
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:12 write ui/src/utils/exportDownload.ts
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:12 write ui/src/utils/lossExport.ts
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:13 strreplace ui/src/components/MetricChart.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:14 strreplace ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:14 strreplace ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:14 strreplace ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:14 strreplace ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:15 strreplace ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:15 strreplace ui/src/views/DashboardView.vue
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:77 write scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:86 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:87 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:88 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:89 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:90 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:94 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:95 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:98 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:107 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:125 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:126 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:127 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:137 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:138 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:139 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:140 strreplace scripts/plot_event_rate_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:152 strreplace scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:155 strreplace scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:158 strreplace scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:206 write scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:207 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:208 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:211 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:211 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:221 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:221 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:221 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:221 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:222 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:222 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:228 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:262 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:298 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:298 strreplace scripts/plot_loss_current_run.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:344 strreplace scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:344 strreplace scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:344 strreplace scripts/plot_active_du_history.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:15 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:44 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:44 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:59 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:60 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:60 strreplace ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:61 strreplace ui/server/supervisor.yaml
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:62 strreplace ui/src/services/supervisorApi.ts
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:64 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:64 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:64 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:64 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:64 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:65 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:66 strreplace ui/src/data/metricInfo.ts
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:68 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:69 strreplace ui/src/views/DashboardView.vue
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:69 write ui/server/test_supervisor_du_udp.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:71 strreplace ui/server/test_supervisor_du_udp.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:71 strreplace ui/server/test_supervisor_du_udp.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:114 strreplace cfgs/sysconfig.yaml
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:114 strreplace include/cs_yaml_config.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:114 strreplace src/cs_yaml_config.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:114 strreplace include/t3_trigger.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:114 strreplace include/trigger_pipeline.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:115 strreplace src/app.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:115 strreplace src/t3_trigger.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:115 write include/data_parser.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:115 write src/data_parser.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:117 strreplace include/gate_logic.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:117 strreplace include/gate_logic.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:117 strreplace include/gate_logic.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:122 strreplace src/trigger_processor_gate_logic.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:122 strreplace src/trigger_processor_gate_logic.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:122 strreplace include/t3_trigger.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:122 strreplace include/t3_trigger.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:122 strreplace src/t3_trigger.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace include/trigger_pipeline.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace include/trigger_pipeline.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:123 strreplace src/trigger_processor_pipeline.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:124 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:124 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:124 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:124 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:124 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:125 strreplace include/t3_filter.h
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:125 strreplace src/data_handler.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:125 strreplace src/data_handler.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 write tests/test_data_handler_t2_monotonic.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tests/test_t3_trigger_legacy.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tools/entry_gate/replay_new_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:127 strreplace tools/entry_gate/replay_new_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:128 strreplace tools/entry_gate/replay_new_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:128 strreplace tests/test_data_handler_legacy_parsing.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:129 strreplace tools/entry_gate/replay_old_cw_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:129 strreplace tools/entry_gate/replay_old_cw_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:129 strreplace tools/entry_gate/replay_old_cw_t2.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:129 strreplace tests/test_t3_filter_order.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:129 strreplace tests/test_t3_filter_order.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:134 strreplace tests/test_t2_stage_trace.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:135 strreplace tests/test_t2_stage_trace.cpp
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:135 strreplace tests/test_data_handler_capture.cpp
+
+=== SKIPPED ===
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:123 already applied scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:124 already applied scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:134 already applied scripts/plot_active_du_history.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:46 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:46 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:49 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:49 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:50 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:53 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:54 skip write /data/home/grand/gumh/grand-cs-daq/new-cs-daq-v1.0/grand-daq/ui/server/_du_udp_impl.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:55 already applied ui/server/supervisor.py
+ae72f394-fcfc-4d1a-917e-425c18297c0c.jsonl:58 already applied ui/server/supervisor.py
+
+=== FAILED ===
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:15 strreplace no match ui/src/views/DashboardView.vue
+b9df6042-39b2-44df-bc88-138499fe7f21.jsonl:15 strreplace no match ui/src/views/DashboardView.vue
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:73 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:74 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:108 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:115 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:121 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:131 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:236 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:237 strreplace no match scripts/plot_active_du_history.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:310 strreplace missing scripts/plot_loss_current_meeting.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:312 strreplace missing scripts/plot_loss_current_meeting.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:312 strreplace missing scripts/plot_loss_current_meeting.py
+df405785-581a-4582-8ed3-4d23cf3222ef.jsonl:356 strreplace no match scripts/plot_active_du_history.py
+
+=== MANUAL FIXES ===
+t2_time_only.bin converted 20B -> 28B (12B records)
+plot_loss_current_meeting.py rebuilt (wrapper around plot_loss_run_stability)
+test_data_handler_legacy_parsing.cpp assert size >= 28u
+docs/superpowers restored from HEAD (unrelated deletions reverted)
+
+=== BUILD ===
+cmake + make -j succeeded
+binary: build/daq_main (37M)
+make test NOT run; no daq/supervisor started

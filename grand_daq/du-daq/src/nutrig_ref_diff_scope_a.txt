@@ -1,0 +1,8 @@
+155c155
+<             printf("trace: %lld\n", *hitId);
+---
+>             // printf("hit: %lld\n", *hitId);
+194c194
+<             printf("get 0: %d, get 1: %d\n", get<0>(t2_res), get<1>(t2_res));
+---
+>             //printf("get 0: %d, get 1: %d\n", get<0>(t2_res), get<1>(t2_res));

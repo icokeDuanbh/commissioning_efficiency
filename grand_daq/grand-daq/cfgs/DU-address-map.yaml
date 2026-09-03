@@ -1,0 +1,537 @@
+Global:
+  Configuration: 
+    Auto Reboot:
+      baseAddr: 0x000
+      startBit: 15
+      nBits: 1
+    Filter 1: 
+      baseAddr: 0x000 
+      startBit: 8
+      nBits: 1
+    Filter 2: 
+      baseAddr: 0x000
+      startBit: 9
+      nBits: 1
+    Filter 3: 
+      baseAddr: 0x000
+      startBit: 10
+      nBits: 1
+    Filter 4: 
+      baseAddr: 0x000
+      startBit: 11
+      nBits: 1
+    Filter 5: 
+      baseAddr: 0x000
+      startBit: 4
+      nBits: 1
+    Filter 6: 
+      baseAddr: 0x000
+      startBit: 5
+      nBits: 1
+    Filter 7: 
+      baseAddr: 0x000
+      startBit: 6
+      nBits: 1
+    Filter 8: 
+      baseAddr: 0x000
+      startBit: 7
+      nBits: 1
+    # Fake ADC: 
+    #   baseAddr: 0x000
+    #   startBit: 6
+    #   nBits: 1
+    1PPS: 
+      baseAddr: 0x000
+      startBit: 1
+      nBits: 1
+    Enable DAQ: 
+      baseAddr: 0x000
+      startBit: 0
+      nBits: 1
+  Trigger:
+    Channel 1:
+      baseAddr: 0x002
+      startBit: 8
+      nBits: 1
+    Channel 2:
+      baseAddr: 0x002
+      startBit: 9
+      nBits: 1
+    Channel 3:
+      baseAddr: 0x002
+      startBit: 10
+      nBits: 1
+    Channel 4:
+      baseAddr: 0x002
+      startBit: 11
+      nBits: 1
+    Ch1 AND Ch2:
+      baseAddr: 0x002
+      startBit: 7
+      nBits: 1
+    (not Ch1)AND Ch2: 
+      baseAddr: 0x002
+      startBit: 2
+      nBits: 1
+    Ch1 AND Ch2, Ch2>Ch1: 
+      baseAddr: 0x002
+      startBit: 1
+      nBits: 1
+    Ch3 AND Ch4: 
+      baseAddr: 0x002
+      startBit: 0
+      nBits: 1
+    20Hz: 
+      baseAddr: 0x002
+      startBit: 6
+      nBits: 1
+    10 sec:
+      baseAddr: 0x002
+      startBit: 5
+      nBits: 1
+    Internal: 
+      baseAddr: 0x002
+      startBit: 4
+      nBits: 1
+  Internal Trigger Rate:
+    (1000000,124)Hz: 
+      baseAddr: 0x004
+      startBit: 0
+      nBits: 16
+  TriggerOverlap: 
+    Time(ns): 
+      baseAddr: 0x006
+      startBit: 0
+      nBits: 16
+  Battery Voltages(off,on)V:
+    BatLow:
+      baseAddr: 0x00C
+      startBit: 0
+      nBits: 16
+    BatHigh:
+      baseAddr: 0x00E
+      startBit: 0
+      nBits: 16
+  TriggerBlock:
+    FIFO count:
+      baseAddr: 0x00A
+      startBit: 0
+      nBits: 16
+Input: 
+  Ch1:
+    Off: 
+      baseAddr: 0x004
+      startBit: 0
+      nBits: 1
+    ADC: 
+      baseAddr: 0x008
+      startBit: 0
+      nBits: 4
+  Ch2:
+    Off:
+      baseAddr: 0x004
+      startBit: 1
+      nBits: 1
+    ADC:
+      baseAddr: 0x008
+      startBit: 4
+      nBits: 4
+  Ch3: 
+    Off:
+      baseAddr: 0x004
+      startBit: 2
+      nBits: 1
+    ADC:
+      baseAddr: 0x008
+      startBit: 8
+      nBits: 4
+  Ch4:
+    Off:
+      baseAddr: 0x004
+      startBit: 3
+      nBits: 1
+    ADC:
+      baseAddr: 0x008
+      startBit: 12
+      nBits: 4
+Channels:
+  Channel 1:
+    Pre Trigger:
+      baseAddr: 0x010
+      startBit: 0
+      nBits: 16
+    Post Trigger:
+      baseAddr: 0x012
+      startBit: 0
+      nBits: 16
+    Additional Gain[-14,23.5](dB): 
+      baseAddr: 0x020
+      startBit: 0
+      nBits: 16
+    Integration time: 
+      baseAddr: 0x022
+      startBit: 8
+      nBits: 8
+    Min.Baseline(ADC): 
+      baseAddr: 0x026
+      startBit: 0
+      nBits: 16
+    Max.Baseline(ADC): 
+      baseAddr: 0x024
+      startBit: 0
+      nBits: 16
+    Signal Treshold(ADC): 
+      baseAddr: 0x050
+      startBit: 0
+      nBits: 16
+    Noise Treshold(ADC): 
+      baseAddr: 0x052
+      startBit: 0
+      nBits: 16
+    Quiet Time before Sig treshold(ns): 
+      baseAddr: 0x054
+      startBit: 0
+      nBits: 8 
+    Time after Sig threshold(ns): 
+      baseAddr: 0x054
+      startBit: 8
+      nBits: 8
+    Max Time between threshold crossings(ns): 
+      baseAddr: 0x056
+      startBit: 0
+      nBits: 8
+    Min number of threshold crossings(ns): 
+      baseAddr: 0x058
+      startBit: 0
+      nBits: 8
+    Max number of threshold crossings(ns):
+      baseAddr: 0x056
+      startBit: 8
+      nBits: 8
+    Min charge: 
+      baseAddr: 0x05a
+      startBit: 8
+      nBits: 8
+    Max charge: 
+      baseAddr: 0x058
+      startBit: 8
+      nBits: 8
+#IIR Notch filter
+    Filter1:
+      baseAddr: 0x80
+      startBit: 0
+      nBits: 128
+    Filter2:
+      baseAddr: 0xc0
+      startBit: 0
+      nBits: 128
+    Filter3:
+      baseAddr: 0x100
+      startBit: 0
+      nBits: 128
+    Filter4:
+      baseAddr: 0x140
+      startBit: 0
+      nBits: 128
+    Filter5:
+      baseAddr: 0x200
+      startBit: 0
+      nBits: 128
+    Filter6:
+      baseAddr: 0x240
+      startBit: 0
+      nBits: 128
+    Filter7:
+      baseAddr: 0x280
+      startBit: 0
+      nBits: 128
+    Filter8:
+      baseAddr: 0x2c0
+      startBit: 0
+      nBits: 128
+  Channel 2:
+    Pre Trigger:
+      baseAddr: 0x014
+      startBit: 0
+      nBits: 16
+    Post Trigger:
+      baseAddr: 0x016
+      startBit: 0
+      nBits: 16
+    Additional Gain[-14,23.5](dB):
+      baseAddr: 0x02c
+      startBit: 0
+      nBits: 16
+    Integration time:
+      baseAddr: 0x02e
+      startBit: 8
+      nBits: 8
+    Min.Baseline(ADC):
+      baseAddr: 0x032
+      startBit: 0
+      nBits: 16
+    Max.Baseline(ADC):
+      baseAddr: 0x030
+      startBit: 0
+      nBits: 16
+    Signal Treshold(ADC):
+      baseAddr: 0x05c
+      startBit: 0
+      nBits: 16
+    Noise Treshold(ADC):
+      baseAddr: 0x05e
+      startBit: 0
+      nBits: 16
+    Quiet Time before Sig treshold(ns):
+      baseAddr: 0x060
+      startBit: 0
+      nBits: 16
+    Time after Sig threshold(ns):
+      baseAddr: 0x060
+      startBit: 8
+      nBits: 8
+    Max Time between threshold crossings(ns):
+      baseAddr: 0x062
+      startBit: 0
+      nBits: 16
+    Min number of threshold crossings(ns):
+      baseAddr: 0x064
+      startBit: 0
+      nBits: 16
+    Max number of threshold crossings(ns):
+      baseAddr: 0x062
+      startBit: 8
+      nBits: 8
+    Min charge:
+      baseAddr: 0x066
+      startBit: 0
+      nBits: 16
+    Max charge:
+      baseAddr: 0x064
+      startBit: 8
+      nBits: 8
+#IIR Notch filter
+    Filter1:
+      baseAddr: 0x90
+      startBit: 0
+      nBits: 128
+    Filter2:
+      baseAddr: 0xd0
+      startBit: 0
+      nBits: 128
+    Filter3:
+      baseAddr: 0x110
+      startBit: 0
+      nBits: 128
+    Filter4:
+      baseAddr: 0x150
+      startBit: 0
+      nBits: 128
+    Filter5:
+      baseAddr: 0x210
+      startBit: 0
+      nBits: 128
+    Filter6:
+      baseAddr: 0x250
+      startBit: 0
+      nBits: 128
+    Filter7:
+      baseAddr: 0x290
+      startBit: 0
+      nBits: 128
+    Filter8:
+      baseAddr: 0x2d0
+      startBit: 0
+      nBits: 128
+  Channel 3:
+    Pre Trigger:
+      baseAddr: 0x018
+      startBit: 0
+      nBits: 16
+    Post Trigger:
+      baseAddr: 0x01a
+      startBit: 0
+      nBits: 16
+    Additional Gain[-14,23.5](dB):
+      baseAddr: 0x038
+      startBit: 0
+      nBits: 16
+    Integration time:
+      baseAddr: 0x03a
+      startBit: 8
+      nBits: 8
+    Min.Baseline(ADC):
+      baseAddr: 0x03e
+      startBit: 0
+      nBits: 16
+    Max.Baseline(ADC):
+      baseAddr: 0x03c
+      startBit: 0
+      nBits: 16
+    Signal Treshold(ADC):
+      baseAddr: 0x068
+      startBit: 0
+      nBits: 16
+    Noise Treshold(ADC):
+      baseAddr: 0x06a
+      startBit: 0
+      nBits: 16
+    Quiet Time before Sig treshold(ns):
+      baseAddr: 0x06c
+      startBit: 0
+      nBits: 16
+    Time after Sig threshold(ns):
+      baseAddr: 0x06c
+      startBit: 8
+      nBits: 8
+    Max Time between threshold crossings(ns):
+      baseAddr: 0x06e
+      startBit: 0
+      nBits: 16
+    Min number of threshold crossings(ns):
+      baseAddr: 0x070
+      startBit: 0
+      nBits: 16
+    Max number of threshold crossings(ns):
+      baseAddr: 0x06e
+      startBit: 8
+      nBits: 8
+    Min charge:
+      baseAddr: 0x072
+      startBit: 0
+      nBits: 16
+    Max charge:
+      baseAddr: 0x070
+      startBit: 8
+      nBits: 8
+#IIR Notch filter
+    Filter1:
+      baseAddr: 0xa0
+      startBit: 0
+      nBits: 128 
+    Filter2:
+      baseAddr: 0xe0
+      startBit: 0
+      nBits: 128
+    Filter3:
+      baseAddr: 0x120
+      startBit: 0
+      nBits: 128
+    Filter4:
+      baseAddr: 0x160
+      startBit: 0
+      nBits: 128
+    Filter5:
+      baseAddr: 0x220
+      startBit: 0
+      nBits: 128
+    Filter6:
+      baseAddr: 0x260
+      startBit: 0
+      nBits: 128
+    Filter7:
+      baseAddr: 0x2a0
+      startBit: 0
+      nBits: 128
+    Filter8:
+      baseAddr: 0x2e0
+      startBit: 0
+      nBits: 128
+  Channel 4:
+    Pre Trigger:
+      baseAddr: 0x01c
+      startBit: 0
+      nBits: 16
+    Post Trigger:
+      baseAddr: 0x01e
+      startBit: 0
+      nBits: 16
+    Additional Gain[-14,23.5](dB):
+      baseAddr: 0x044
+      startBit: 0
+      nBits: 16
+    Integration time:
+      baseAddr: 0x046
+      startBit: 8
+      nBits: 8
+    Min.Baseline(ADC):
+      baseAddr: 0x04a
+      startBit: 0
+      nBits: 16
+    Max.Baseline(ADC):
+      baseAddr: 0x048
+      startBit: 0
+      nBits: 16
+    Signal Treshold(ADC):
+      baseAddr: 0x074
+      startBit: 0
+      nBits: 16
+    Noise Treshold(ADC):
+      baseAddr: 0x076
+      startBit: 0
+      nBits: 16
+    Quiet Time before Sig treshold(ns):
+      baseAddr: 0x078
+      startBit: 0
+      nBits: 16
+    Time after Sig threshold(ns):
+      baseAddr: 0x078
+      startBit: 8
+      nBits: 8
+    Max Time between threshold crossings(ns):
+      baseAddr: 0x07a
+      startBit: 0
+      nBits: 16
+    Min number of threshold crossings(ns):
+      baseAddr: 0x07c
+      startBit: 0
+      nBits: 16
+    Max number of threshold crossings(ns):
+      baseAddr: 0x07a
+      startBit: 8
+      nBits: 8
+    Min charge:
+      baseAddr: 0x07e
+      startBit: 0
+      nBits: 16
+    Max charge:
+      baseAddr: 0x07c
+      startBit: 8
+      nBits: 8
+#IIR Notch filter
+    Filter1:
+      baseAddr: 0xb0
+      startBit: 0
+      nBits: 128
+    Filter2:
+      baseAddr: 0xf0
+      startBit: 0
+      nBits: 128
+    Filter3:
+      baseAddr: 0x130
+      startBit: 0
+      nBits: 128
+    Filter4:
+      baseAddr: 0x170
+      startBit: 0
+      nBits: 128
+    Filter5:
+      baseAddr: 0x230
+      startBit: 0
+      nBits: 128
+    Filter6:
+      baseAddr: 0x270
+      startBit: 0
+      nBits: 128
+    Filter7:
+      baseAddr: 0x2b0
+      startBit: 0
+      nBits: 128
+    Filter8:
+      baseAddr: 0x2f0
+      startBit: 0
+      nBits: 128
+  Station Rate(Simulation): 
+    baseAddr: 0x1e0
+    startBit: 0
+    nBits: 16

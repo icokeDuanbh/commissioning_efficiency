@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build event_initiator_test",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-std=c++17",
+        "-DTEST_MAIN",
+        "-I${workspaceFolder}/grand_daq/du-daq/src",
+        "-I${workspaceFolder}/grand_daq/du-daq/eigen-5.0.0",
+        "-I${workspaceFolder}/grand_daq/template_flt_online",
+        "-Wl,-rpath,/Users/xishui/miniconda3/lib",
+        "FLT1/event_initiator.cpp",
+        "grand_daq/du-daq/src/data_format.cpp",
+        "grand_daq/template_flt_online/template_FLT.cpp",
+        "grand_daq/template_flt_online/utils.cpp",
+        "grand_daq/template_flt_online/error_handling.cpp",
+        "-o",
+        "${workspaceFolder}/event_initiator_test"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"],
+      "detail": "Compile event_initiator_test with g++17, TEST_MAIN defined, conda lib rpath"
+    }
+  ]
+}

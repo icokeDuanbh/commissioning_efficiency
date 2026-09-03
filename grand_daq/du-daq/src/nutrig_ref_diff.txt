@@ -1,0 +1,12 @@
+94c94
+<     std::cout << "We are now in scope_t2_template!" << std::endl;
+---
+>     // std::cout << "We are now in scope_t2_template!" << std::endl;;
+218c218
+<     std::cout << "Template FLT correlation (channel 1 = X) >>> rho = " << template_flt_x.corr_max_best << std::endl;;
+---
+>     // std::cout << "Template FLT correlation (channel 1 = X) >>> rho = " << template_flt_x.corr_max_best << std::endl;;
+225c225
+<     std::cout << "Template FLT correlation (channel 2 = Y) >>> rho = " << template_flt_y.corr_max_best << std::endl;;
+---
+>     // std::cout << "Template FLT correlation (channel 2 = Y) >>> rho = " << template_flt_y.corr_max_best << std::endl;;

@@ -1,0 +1,345 @@
+global:
+  networkInputBufferSize: 2048000
+  zmqSndBufferSize: 2048000
+  eventBufferPageSize: 2048000
+  eventBufferNumberOfPages: 1
+  # 触发超时和时间切割（1秒 = 1000000000 ns）
+  t3TriggerTimeCut: 1000000000
+  t3TriggerTimeOut: 1800000000
+  t3TriggerTimeOutCap: 2000000000
+  t3GateIdleGap: 150000000
+  t3TriggerSettleGap: 0
+  t3ClosedBucketRetention: 10000000000
+  t3GateExtendOnProgressOnly: true
+  # Gate deadline 使用 bounded sliding：首包为基准，边缘活跃时允许小幅延长，但始终受 hard cap 限制。
+  t3GateDeadlineMode: first_arrival_bounded_sliding
+  # 时间窗口：18微秒 = 18000 ns
+  t3TriggerTimeWindow: 23000
+  # 触发阈值 Nhit（t3TriggerDuNumber）：时间窗内至少有 N 个不同 DU 出现 hit 才认为触发
+  t3TriggerDuNumber: 5
+  # 触发类型：2 = 使用因果窗口过滤
+  t3TriggerType: 2
+  t3CausalWindowEnable: true
+  # 文件名模板（不包含 RUN 前缀；RUN 号在启动时通过扫描输出目录自动分配）
+  l1FileName: MD_20dB-58DUs-512trace-FY2Float-Normal-Wonlinefilter-new-cs-daq-3steps
+  l3FileName: CD_20dB-GP65-58DUs-512trace-FY2Float-Normal-Wonlinefilter-new-cs-daq-3steps
+  # L1/MD 输出目录（与 old-cs-daq 的 raw_data 共用，靠文件名里的 new-cs-daq-chengwei 区分）
+  l1StorePath: /data/home/grand/workarea/raw_data
+  # CD 输出目录（与 old-cs-daq 的 t3_data 共用）
+  l3StorePath: /data/home/grand/workarea/t3_data
+  # 单个 .dat 文件轮转大小（MB）
+  maxFileSizeMB: 100
+  # Builder 单事件最大等待时间（ms）
+  builderEventTimeoutMs: 8000
+  # daqMode: 3 = MD+CD（同时保存 L1 和 L3 数据）
+  daqMode: 3
+  eventNumberSaved: 100000
+  dudaqFileInjection: false
+  antennaDistancesFile: detector_distances_May24_v2.txt
+  gpuEnable: true
+  gpuStrictMode: false
+  gpuDevice: 0
+  gpuBatchSize: 20
+  gpuPairThreshold: 10
+
+  # ------------------------------
+  # T3 触发过滤参数
+  # ------------------------------
+  # 因果/几何过滤的时间容差（ns），仅在 t3TriggerType==2 时使用
+  # 默认：100（基于 DU 间 <100ns 同步精度）
+  t3CausalTimeToleranceNs: 100
+  # 重复事件过滤（基于 DU 对时间差 pair-diff）
+
+  # true：检测到重复就丢弃；false：保留重复事件（便于背景研究）
+  t3DuplicateFilterEnable: true
+  # DU 对时间差相似判定阈值（ns）
+  t3DuplicateTimeDiffThresholdNs: 20
+  # 重复判定保留的历史事件条数
+  t3DuplicateHistorySize: 20
+  # 判定重复所需的最少相似 DU-pair 数
+  t3DuplicateMinPair: 5
+  # 记录被 duplicate pair-diff 在线过滤剔除的候选事例；路径为输出目录，每个 run 单独生成日志文件
+  t3DuplicateRejectLogEnable: true
+  t3DuplicateRejectLogPath: /data/home/grand/gumh/grand-cs-daq/new-cs-daq-v1.0/grand-daq/logs/duplicate-reject-log
+  t3DuplicateRejectLogQueueCapacity: 4096
+  # 模板匹配过滤（因果律之后、固定源 duplicate 之前）
+  t3TemplateMatchFilterEnable: true
+  t3TemplateMatchCoefficient: 0.6
+
+  # ------------------------------
+  # T3 Hot DU 率控（隔离 / 降权）
+  # ------------------------------
+  # 识别“持续高触发率”的 DU，降低其对偶然符合的贡献
+  # 默认：关闭（保持改动前行为）
+  t3RateControlEnable: false
+  # 触发率统计滑动窗口长度（秒）
+  t3RateControlStatWindowSec: 10
+  # soft-hot 条件：r_i > median(r)*alpha 或 r_i > softAbsHz
+  t3RateControlSoftAlpha: 5
+  t3RateControlSoftAbsHz: 500
+  # critical-hot 条件：r_i > criticalHz（直接隔离，不参与符合）
+  t3RateControlCriticalHz: 1000
+  # 迟滞：连续 N 个统计窗口满足/恢复才进入/退出 hot（防止短时波动误伤）
+  t3RateControlHysteresis: 3
+  # critical-hot 隔离时长（秒）
+  t3RateControlQuarantineSec: 60
+
+  # ------------------------------
+  # T3 波前/方向拟合（平面波模型）
+  # ------------------------------
+  # 默认：关闭。建议先开 tag_only 跑一段时间看 RMS 分布，再决定是否开启 filter 拦截
+  t3WavefrontFitEnable: false
+  # 模式：
+  # - tag_only：只计算/打印（打标），不拒绝
+  # - filter：当 RMS > 阈值 时拒绝事件
+  t3WavefrontFitMode: tag_only
+  # 残差 RMS 阈值（ns），仅 mode=filter 时生效
+  t3WavefrontRmsThresholdNs: 200
+  # 鲁棒拟合：允许剔除最差 outlier 后重拟合（减少单个坏点的错杀风险）
+  t3WavefrontRobust: true
+  # 允许剔除的 outlier 个数（建议 0~2；注意要保证最后至少还有 4 个点可拟合）
+  t3WavefrontMaxOutliers: 1
+  # DU 坐标文件：每行格式为 "DU_ID  x  y  z"（单位：米）
+  t3WavefrontCoordinatesFile: _gp65_rtksort.txt
+
+dataUnits:
+  - type: modelA
+    ID: 103
+    ip: 192.168.61.3
+    port: 19555
+  - type: modelA
+    ID: 109
+    ip: 192.168.61.9
+    port: 19555
+  - type: modelA
+    ID: 1010
+    ip: 192.168.61.10
+    port: 19555
+  - type: modelA
+    ID: 1011
+    ip: 192.168.61.11
+    port: 19555
+  - type: modelA
+    ID: 1012
+    ip: 192.168.61.12
+    port: 19555
+  - type: modelA
+    ID: 1013
+    ip: 192.168.61.13
+    port: 19555
+  - type: modelA
+    ID: 1014
+    ip: 192.168.61.14
+    port: 19555
+  - type: modelA
+    ID: 1016
+    ip: 192.168.61.16
+    port: 19555
+  - type: modelA
+    ID: 1017
+    ip: 192.168.61.17
+    port: 19555
+  - type: modelA
+    ID: 1018
+    ip: 192.168.61.18
+    port: 19555
+  - type: modelA
+    ID: 1019
+    ip: 192.168.61.19
+    port: 19555
+  - type: modelA
+    ID: 1020
+    ip: 192.168.61.20
+    port: 19555
+  - type: modelA
+    ID: 1022
+    ip: 192.168.61.22
+    port: 19555
+  - type: modelA
+    ID: 1023
+    ip: 192.168.61.23
+    port: 19555
+  - type: modelA
+    ID: 1024
+    ip: 192.168.61.24
+    port: 19555
+  - type: modelA
+    ID: 1029
+    ip: 192.168.61.29
+    port: 19555
+  - type: modelA
+    ID: 1030
+    ip: 192.168.61.30
+    port: 19555
+  - type: modelA
+    ID: 1033
+    ip: 192.168.61.33
+    port: 19555
+  - type: modelA
+    ID: 1035
+    ip: 192.168.61.35
+    port: 19555
+  - type: modelA
+    ID: 1037
+    ip: 192.168.61.37
+    port: 19555
+  - type: modelA
+    ID: 1038
+    ip: 192.168.61.38
+    port: 19555
+  - type: modelA
+    ID: 1039
+    ip: 192.168.61.39
+    port: 19555
+  - type: modelA
+    ID: 1040
+    ip: 192.168.61.40
+    port: 19555
+  - type: modelA
+    ID: 1041
+    ip: 192.168.61.41
+    port: 19555
+  - type: modelA
+    ID: 1042
+    ip: 192.168.61.42
+    port: 19555
+  - type: modelA
+    ID: 1043
+    ip: 192.168.61.43
+    port: 19555
+  - type: modelA
+    ID: 1045
+    ip: 192.168.61.45
+    port: 19555
+  - type: modelA
+    ID: 1046
+    ip: 192.168.61.46
+    port: 19555
+  - type: modelA
+    ID: 1047
+    ip: 192.168.61.47
+    port: 19555
+  - type: modelA
+    ID: 1048
+    ip: 192.168.61.48
+    port: 19555
+  - type: modelA
+    ID: 1051
+    ip: 192.168.61.51
+    port: 19555
+  - type: modelA
+    ID: 1052
+    ip: 192.168.61.52
+    port: 19555
+  - type: modelA
+    ID: 1054
+    ip: 192.168.61.54
+    port: 19555
+  - type: modelA
+    ID: 1055
+    ip: 192.168.61.55
+    port: 19555
+  - type: modelA
+    ID: 1056
+    ip: 192.168.61.56
+    port: 19555
+  - type: modelA
+    ID: 1058
+    ip: 192.168.61.58
+    port: 19555
+  - type: modelA
+    ID: 1059
+    ip: 192.168.61.59
+    port: 19555
+  - type: modelA
+    ID: 1065
+    ip: 192.168.61.65
+    port: 19555
+  - type: modelA
+    ID: 1066
+    ip: 192.168.61.66
+    port: 19555
+  - type: modelA
+    ID: 1071
+    ip: 192.168.61.71
+    port: 19555
+  - type: modelA
+    ID: 1072
+    ip: 192.168.61.72
+    port: 19555
+  - type: modelA
+    ID: 1073
+    ip: 192.168.61.73
+    port: 19555
+  - type: modelA
+    ID: 1074
+    ip: 192.168.61.74
+    port: 19555
+  - type: modelA
+    ID: 1075
+    ip: 192.168.61.75
+    port: 19555
+  - type: modelA
+    ID: 1076
+    ip: 192.168.61.76
+    port: 19555
+  - type: modelA
+    ID: 1077
+    ip: 192.168.61.77
+    port: 19555
+  - type: modelA
+    ID: 1078
+    ip: 192.168.61.78
+    port: 19555
+  - type: modelA
+    ID: 1081
+    ip: 192.168.61.81
+    port: 19555
+  - type: modelA
+    ID: 1082
+    ip: 192.168.61.82
+    port: 19555
+  - type: modelA
+    ID: 1083
+    ip: 192.168.61.83
+    port: 19555
+  - type: modelA
+    ID: 1084
+    ip: 192.168.61.84
+    port: 19555
+  - type: modelA
+    ID: 1085
+    ip: 192.168.61.85
+    port: 19555
+  - type: modelA
+    ID: 1086
+    ip: 192.168.61.86
+    port: 19555
+  - type: modelA
+    ID: 1088
+    ip: 192.168.61.88
+    port: 19555
+  - type: modelA
+    ID: 1089
+    ip: 192.168.61.89
+    port: 19555
+  - type: modelA
+    ID: 1090
+    ip: 192.168.61.90
+    port: 19555
+  - type: modelA
+    ID: 1091
+    ip: 192.168.61.91
+    port: 19555
+  - type: modelA
+    ID: 1092
+    ip: 192.168.61.92
+    port: 19555
+  - type: modelA
+    ID: 1093
+    ip: 192.168.61.93
+    port: 19555
+  - type: modelA
+    ID: 1094
+    ip: 192.168.61.94
+    port: 19555

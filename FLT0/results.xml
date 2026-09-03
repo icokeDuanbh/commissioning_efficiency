@@ -1,0 +1,6 @@
+<testsuites name="results">
+  <testsuite name="all" package="all">
+    <property name="random_seed" value="1785316918" />
+    <testcase name="run_trigger_simulation" classname="test_sig_det" file="/Users/xishui/Dropbox/Project/GRAND/Event_injector/FLT0/test_sig_det.py" lineno="87" time="0.009615898132324219" sim_time_ns="382.0" ratio_time="39725.87840920361" />
+  </testsuite>
+</testsuites>
