@@ -1,4 +1,17 @@
 #!/pbs/home/x/xtian/.conda/envs/grandlib2304/bin/python3.9
+"""
+T1_trigger_offline.py
+=====================
+Offline FLT0 trigger — thin adapter over trigger_FLT0().
+
+The core algorithm lives in offline_FLT0_trigger.py (canonical implementation,
+shared with Clement's analysis chain). This module exposes
+extract_trigger_parameters() as a compatibility shim so that run_FLT0.py
+requires no changes.
+
+NC bounds are exclusive on both sides (nc_min < NC < nc_max), matching the
+FPGA firmware (sig_det.v line 261).
+"""
 import numpy as np
 import sys
 try:
@@ -6,85 +19,49 @@ try:
 except ImportError:
     rt = None
 
+from offline_FLT0_trigger import trigger_FLT0
+
+
 def extract_trigger_parameters(trace, trigger_config, baseline=0):
-    # Extract the trigger infos from a trace
+    """
+    Offline FLT0 trigger decision for a single trace.
 
-    # Parameters :
-    # ------------
-    # trace, numpy.ndarray: 
-    # traces in ADC unit
-    # trigger_config, dict:
-    # the trigger parameters set in DAQ
+    Wraps trigger_FLT0() and returns information for the *first* valid T1
+    crossing found in the trace, preserving API compatibility with run_FLT0.py.
 
-    # Returns :
-    # ---------
-    # Index in the trace when the first T1 crossing happens
-    # Indices in the trace of T2 crossing happens
-    # Number of T2 crossings
-    # Q, Peak/NC
+    Parameters
+    ----------
+    trace : numpy.ndarray
+        ADC trace in ADC counts.
+    trigger_config : dict
+        Trigger parameters with keys:
+          th1, th2, t_quiet, t_period, t_sepmax, nc_min, nc_max
+    baseline : int, optional
+        Unused — kept for API compatibility.
 
-    # Find the position of the first T1 crossing
-    index_t1_crossing = np.where((trace) > trigger_config["th1"],
-                                 np.arange(len(trace)), -1)
-    dict_trigger_infos = dict()
-    mask_T1_crossing = (index_t1_crossing != -1)
-    if sum(mask_T1_crossing) == 0:
-        # No T1 crossing 
-        raise ValueError("No T1 crossing!")
-    dict_trigger_infos['index_T1_crossing'] = None
-    # Tquiet to decide the quiet time before the T1 crossing 
-    for i in index_t1_crossing[mask_T1_crossing]:
-       # Abs value not exceeds the T1 threshold
-       if i - trigger_config["t_quiet"]//2 < 0:
-          raise ValueError("Not enough data before T1 crossing!")
-       if np.all((trace[np.max([0, i - trigger_config['t_quiet'] // 2]):i]) <= trigger_config["th1"]):
-          dict_trigger_infos["index_T1_crossing"] = i
-          # the first T1 crossing satisfying the quiet condition
-          break
-    if dict_trigger_infos['index_T1_crossing'] == None:
-       raise ValueError("No T1 crossing with Tquiet satified!")
-    # The trigger logic works for the timewindow given by T_period after T1 crossing.
-    # Count number of T2 crossings, relevant pars: T2, NCmin, NCmax, T_sepmax
-    # From ns to index, divided by two for 500MHz sampling rate
-    period_after_T1_crossing = trace[dict_trigger_infos["index_T1_crossing"]:dict_trigger_infos["index_T1_crossing"]+trigger_config['t_period']//2]
-    # All the points above +T2
-    positive_T2_crossing = (np.array(period_after_T1_crossing) > trigger_config['th2']).astype(int)
-    # Positive crossing, the point before which is below T2.
-    mask_T2_crossing_positive = np.diff(positive_T2_crossing) == 1
-    # if np.sum(mask_T2_crossing_positive) > 0:
-    #     index_T2_crossing_positive = np.arange(len(period_after_T1_crossing) - 1)[mask_T2_crossing_positive]
-    negative_T2_crossing = (np.array(period_after_T1_crossing) < - trigger_config['th2']).astype(int)
-    mask_T2_crossing_negative = np.diff(negative_T2_crossing) == 1
-    # if np.sum(mask_T2_crossing_negative) > 0:
-    #     index_T2_crossing_negative = np.arange(len(period_after_T1_crossing) - 1)[mask_T2_crossing_negative]
-    # n_T2_crossing_negative = np.len(index_T2_crossing_positive)
-    # Register the first T1 crossing as a T2 crossing
-    mask_first_T1_crossing = np.zeros(len(period_after_T1_crossing), dtype=bool)
-    mask_first_T1_crossing[0] = True
-    # mask_first_T1_crossing[1:] = (mask_T2_crossing_positive | mask_T2_crossing_negative)
-    mask_first_T1_crossing[1:] = (mask_T2_crossing_positive)
-    index_T2_crossing = np.arange(len(period_after_T1_crossing))[mask_first_T1_crossing]
-    n_T2_crossing = 1 # Starting from the first T1 crossing.
-    dict_trigger_infos["index_T2_crossing"] = [0]
-    if len(index_T2_crossing) > 1:
-      for i, j in zip(index_T2_crossing[:-1], index_T2_crossing[1:]):
-          # The separation between successive T2 crossings
-          time_separation = (j - i) * 2
-          if time_separation < trigger_config["t_sepmax"]:
-              n_T2_crossing += 1
-              dict_trigger_infos["index_T2_crossing"].append(j)
-          else:
-              # Violate the maximum separation, fail to trigger
-              raise ValueError(f"Violating Tsepmax, the separation is {time_separation} ns.")
-    else:
-      n_T2_crossing = 1
-      j = 1
-    # Change the reference of indices of T2 crossing
-    dict_trigger_infos["index_T2_crossing"] = np.array(dict_trigger_infos["index_T2_crossing"]) + dict_trigger_infos["index_T1_crossing"]
-    dict_trigger_infos["NC"] = n_T2_crossing
-    # Calulate the peak value
-    dict_trigger_infos["Q"] = (np.max(np.abs(period_after_T1_crossing[:j])) - baseline) / dict_trigger_infos["NC"]
-    return dict_trigger_infos
+    Returns
+    -------
+    dict
+        index_T1_crossing : int   – sample index of the first valid T1
+        NC                : int   – T2 crossing count for that T1
+        T1_amplitude      : float – ADC value at the T1 crossing
+
+    Raises
+    ------
+    ValueError
+        If no valid T1 crossing is found (no T1, quiet violation,
+        Tsepmax violation, or NC out of range).
+    """
+    T1_indices, T1_amplitudes, NC_values = trigger_FLT0(trace, trigger_config)
+
+    if not T1_indices:
+        raise ValueError("No valid T1 crossing found.")
+
+    return {
+        "index_T1_crossing": T1_indices[0],
+        "NC":                 NC_values[0],
+        "T1_amplitude":       T1_amplitudes[0],
+    }
 
 dict_trigger_parameter = dict([
   ("t_quiet", 512),
