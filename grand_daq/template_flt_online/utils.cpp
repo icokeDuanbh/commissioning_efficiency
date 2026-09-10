@@ -59,7 +59,7 @@ Eigen::ArrayXf correlate(const Eigen::ArrayXf& arr1,
 
     // Normalize all correlation with RMS of arr2 and its length to yield a value between [-1,1]
     if (norm){
-        corr / rms(arr2) / arr2.size();
+        corr /= (rms(arr2) * arr2.size());
     }
 
     return corr;
