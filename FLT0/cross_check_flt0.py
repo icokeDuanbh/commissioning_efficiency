@@ -1,10 +1,12 @@
 """
 cross_check_flt0.py  --  FLT0 Python vs HDL (Verilog) cross-check
 ==================================================================
+Located in FLT0/ alongside all cocotb files (Makefile, sig_det.v, test_sig_det.py).
+
 Compares two FLT0 trigger implementations on the same set of traces:
 
-  Python : FLT0/offline_FLT0_trigger.py  --> trigger_FLT0()
-  HDL    : FLT0/sig_det.v via cocotb     --> run_trigger_simulation()
+  Python : offline_FLT0_trigger.py  --> trigger_FLT0()
+  HDL    : sig_det.v via cocotb     --> run_trigger_simulation()
 
 Both are reduced to a single bool: triggered / not triggered.
 
@@ -28,9 +30,8 @@ import sys, os, argparse
 import numpy as np
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-FLT0_DIR = os.path.join(THIS_DIR, "..", "FLT0")
-if THIS_DIR not in sys.path:  sys.path.insert(0, THIS_DIR)
-if FLT0_DIR not in sys.path:  sys.path.insert(0, FLT0_DIR)
+if THIS_DIR not in sys.path:
+    sys.path.insert(0, THIS_DIR)
 
 from offline_FLT0_trigger import trigger_FLT0
 from run_FLT0 import run_trigger_simulation
