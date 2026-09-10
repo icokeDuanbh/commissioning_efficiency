@@ -62,7 +62,7 @@ def trigger_FLT0(channel, dict_trigger_parameter):
                     break
 
             # If the number of T2 crossings is out of bounds, ignore this T1
-            if n_T2_crossing < dict_trigger_parameter["nc_min"] or n_T2_crossing > dict_trigger_parameter["nc_max"]:
+            if n_T2_crossing <= dict_trigger_parameter["nc_min"] or n_T2_crossing >= dict_trigger_parameter["nc_max"]:  # exclusive bounds, matching FPGA (sig_det.v L261)
                 valid_T1 = False
 
             if valid_T1:

@@ -354,7 +354,7 @@ def get_FLT0_trigger_time(trace, FLT0_trig_params, rel_trace_start_time_ns, t_re
     T1_idxs, T1_amps, NC_vals = trigger_FLT0(trace, FLT0_trig_params)
     
     for n in range(len(T1_idxs)):
-        if NC_vals[n] >= FLT0_trig_params['nc_min'] and NC_vals[n] <= FLT0_trig_params['nc_max']:
+        if NC_vals[n] > FLT0_trig_params['nc_min'] and NC_vals[n] < FLT0_trig_params['nc_max']:  # exclusive bounds, matching FPGA (sig_det.v L261)
             rel_FLT0_trig_time_ns.append(rel_trace_start_time_ns + T1_idxs[n] * t_res_ns)
 
     return rel_FLT0_trig_time_ns

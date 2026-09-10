@@ -35,7 +35,8 @@ def run_clement(trace, p):
     T1s, _, NCs = trigger_FLT0(trace, p)
     if not T1s: return False, None
     for nc in NCs:
-        if p["nc_min"] <= nc <= p["nc_max"]: return True, nc
+        if p["nc_min"] < nc < p["nc_max"]:  # exclusive bounds, matching FPGA
+            return True, nc
     return False, NCs[0] if NCs else None
 
 def build_cases(p):
