@@ -37,6 +37,13 @@ materials/
 noise_simulation/
 
 # ============================================================
+# Server snapshot — not tracked
+# ============================================================
+cross_check_cca/
+grand_daq/du-daq_20260910/
+grand_daq/grand-daq_cca/
+
+# ============================================================
 # Excluded scripts and notebooks
 # ============================================================
 simulate_noise_trigger_rate.py

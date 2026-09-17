@@ -3,7 +3,7 @@
 Batch execution worker script for Slurm array jobs.
 
 Given a Slurm array task ID (0..2999) or explicit --job_id, reads the assigned 5 rows
-from sim_manifest.csv, looks up sim_file_path and local_i_sim for each shower,
+from sim_manifest.csv, looks up adc_file_path and local_i_sim for each shower,
 runs run_md_trace_scan, and saves the compressed .npz result into the 150 subfolders:
 results/sim_batch_{i_dir:04d}/sim_{global_sim_id:05d}.npz
 """
@@ -82,7 +82,7 @@ def run_batch_job(
         global_sim_id = int(shower["global_sim_id"])
         i_dir = int(shower["i_dir"])
         local_i_sim = int(shower["local_i_sim"])
-        sim_file_path = shower["sim_file_path"]
+        sim_file_path = shower["adc_file_path"]
 
         # Output folder per batch folder (150 subfolders): results/sim_batch_{i_dir:04d}/sim_{global_sim_id:05d}.npz
         shower_out_dir = out_base / f"sim_batch_{i_dir:04d}"
