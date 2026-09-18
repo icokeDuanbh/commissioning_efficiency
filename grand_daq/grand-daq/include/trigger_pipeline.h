@@ -123,6 +123,30 @@ public:
                                                   uint64_t tm_id = 0,
                                                   uint64_t bucket_timestamp_ns = 0);
 
+    // Seed the duplicate-filter history with one event's hits.
+    // Computes the PTD fingerprint from the flat arrays and pushes it
+    // directly into T3Filter::history_, bypassing nhit/causal/template-match.
+    // Returns true on success, false if t3_filter_ is null or n_hits < 2.
+    bool seedDuplicateHistory(const uint32_t* du_ids,
+                              const uint64_t* timestamps_ns,
+                              int n_hits) {
+        if (!t3_filter_ || !du_ids || !timestamps_ns || n_hits < 2) {
+            return false;
+        }
+        std::vector<Detector> detectors;
+        detectors.reserve(static_cast<std::size_t>(n_hits));
+        for (int i = 0; i < n_hits; ++i) {
+            Detector d;
+            d.id   = static_cast<int>(du_ids[i]);
+            d.time = static_cast<int>(timestamps_ns[i] % 1000000000ULL);
+            d.related_value = 0;
+            detectors.push_back(d);
+        }
+        const PairDiffs pairs = T3Filter::calculatePairDifferences(detectors);
+        t3_filter_->seedHistory(pairs);
+        return true;
+    }
+
 private:
     Config config_;
     std::unique_ptr<GateLogic> gate_logic_;

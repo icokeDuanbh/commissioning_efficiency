@@ -273,6 +273,18 @@ public:
         history_.clear();
     }
 
+    // Directly seed the duplicate-filter history with a pre-computed PTD set.
+    // Bypasses all other cuts (nhit, causal, template-match).
+    // Used by the event injector to warm up the history deque from a
+    // DuplicateRejectLog before the first injected event is submitted.
+    void seedHistory(const PairDiffs& pairs) {
+        if (pairs.empty()) return;
+        history_.push_back(pairs);
+        if (history_.size() > config_.duplicate_history_size) {
+            history_.pop_front();
+        }
+    }
+
 private:
     T3FilterConfig config_;
     PairDiffs prev_pairs_;

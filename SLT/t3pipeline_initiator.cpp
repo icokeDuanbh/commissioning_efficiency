@@ -58,6 +58,33 @@ extern "C" void slt_pipeline_destroy(void* handle) {
     delete static_cast<grand::TriggerPipeline*>(handle);
 }
 
+// Seed the duplicate-filter history with one event's hits.
+//
+// Computes the pair-time-difference fingerprint from the flat
+// (du_ids[], timestamps_ns[], n_hits) arrays and pushes it directly
+// into T3Filter::history_, bypassing nhit / causal / template-match.
+//
+//   handle          — opaque pointer from slt_pipeline_create()
+//   du_ids          — DU identifiers, length n_hits
+//   timestamps_ns   — per-DU nanosecond timestamps (intra-second, i.e.
+//                     the raw ns field from the DuplicateRejectLog), length n_hits
+//   n_hits          — number of DU hits in this event (must be >= 2)
+//
+// Returns 0 on success, -1 on bad arguments (null handle/arrays, n_hits < 2).
+extern "C" int slt_pipeline_seed_history(
+    void*           handle,
+    const uint32_t* du_ids,
+    const uint64_t* timestamps_ns,
+    int             n_hits
+) {
+    if (!handle || !du_ids || !timestamps_ns || n_hits < 2) {
+        return -1;
+    }
+    auto* pipeline = static_cast<grand::TriggerPipeline*>(handle);
+    return pipeline->seedDuplicateHistory(du_ids, timestamps_ns, n_hits) ? 0 : -1;
+}
+
+
 // Run the trigger on one bucket of hits (at most one event expected).
 //
 // Input hits — parallel flat arrays, all length n_hits:

@@ -36,6 +36,7 @@ if str(SLT_DIR) not in sys.path:
     sys.path.insert(0, str(SLT_DIR))
 
 from build_slt_pipeline import build_library
+from load_duplicate_history import parse_duplicate_reject_log
 import ctypes
 import numpy as np
 
@@ -106,6 +107,7 @@ class SLTPipeline:
         self._lib = _load_library()
         self._setup_argtypes()
 
+        self._duplicate_history_size = duplicate_history_size  # saved for preload default
         self._handle = self._lib.slt_pipeline_create(
             ctypes.c_int(trigger_type),
             ctypes.c_int(nhit_threshold),
@@ -210,6 +212,55 @@ class SLTPipeline:
             "window_timestamps":  wts_out[:wtc].copy(),
         }
 
+    def preload_duplicate_history(
+        self,
+        log_file: str,
+        n_events: int = None,
+    ) -> int:
+        """Seed the C++ duplicate-filter history from a DuplicateRejectLog file.
+
+        Reads the first ``n_events`` (or ``duplicate_history_size`` if
+        unspecified) events from *log_file* and pushes their pair-time-
+        difference fingerprints directly into ``T3Filter::history_``,
+        bypassing nhit / causal / template-match cuts entirely.
+
+        This must be called **before** the first ``run()`` call so that the
+        duplicate filter has a warm history from the moment injection starts.
+
+        Parameters
+        ----------
+        log_file:
+            Path to a ``DuplicateRejectLog_*.log`` file from the online DAQ.
+        n_events:
+            How many events (from the start of the file) to seed.  Defaults
+            to ``duplicate_history_size`` as set at pipeline construction.
+
+        Returns
+        -------
+        int
+            Number of events successfully seeded into the history deque.
+        """
+        if n_events is None:
+            # Retrieve the history size that was passed to slt_pipeline_create.
+            # We stored it as an attribute during __init__.
+            n_events = self._duplicate_history_size
+
+        events = parse_duplicate_reject_log(log_file, max_events=n_events)
+
+        seeded = 0
+        for hits in events:
+            du_arr = np.array([h[0] for h in hits], dtype=np.uint32)
+            ts_arr = np.array([h[1] for h in hits], dtype=np.uint64)
+            ret = self._lib.slt_pipeline_seed_history(
+                self._handle,
+                _ptr(du_arr, ctypes.c_uint32),
+                _ptr(ts_arr, ctypes.c_uint64),
+                ctypes.c_int(len(du_arr)),
+            )
+            if ret == 0:
+                seeded += 1
+        return seeded
+
     def __del__(self):
         if getattr(self, "_handle", None) and getattr(self, "_lib", None):
             self._lib.slt_pipeline_destroy(self._handle)
@@ -236,6 +287,14 @@ class SLTPipeline:
 
         lib.slt_pipeline_destroy.restype  = None
         lib.slt_pipeline_destroy.argtypes = [ctypes.c_void_p]
+
+        lib.slt_pipeline_seed_history.restype  = ctypes.c_int
+        lib.slt_pipeline_seed_history.argtypes = [
+            ctypes.c_void_p,                   # handle
+            ctypes.POINTER(ctypes.c_uint32),   # du_ids
+            ctypes.POINTER(ctypes.c_uint64),   # timestamps_ns
+            ctypes.c_int,                      # n_hits
+        ]
 
         lib.slt_pipeline_run.restype  = ctypes.c_int
         lib.slt_pipeline_run.argtypes = [
