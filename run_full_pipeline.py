@@ -275,7 +275,7 @@ if __name__ == "__main__":
     # Optionally warm up the duplicate-filter history from a reject log.
     # Set duplicate_history_file to the path of a DuplicateRejectLog_*.log
     # file downloaded from the online DAQ for the run being simulated.
-    duplicate_history_file = None  # e.g. str(ROOT / "test_data/duplicate_library/DuplicateRejectLog_10439_20260902_064452.log")
+    duplicate_history_file = str(ROOT / "test_data/duplicate_library/DuplicateRejectLog_10439_20260902_064452.log")
     if duplicate_history_file:
         n_seeded = slt_pipeline.preload_duplicate_history(duplicate_history_file)
         print(f"Seeded {n_seeded} events into the duplicate-cut history.")
