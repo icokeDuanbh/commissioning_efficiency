@@ -106,7 +106,7 @@ def parse_duplicate_reject_log(
                 if max_events is not None and len(events) >= max_events:
                     break
 
-    return events
+    return events 
 
 
 def compute_ptd(hits: Event) -> PTD:
