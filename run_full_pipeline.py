@@ -26,7 +26,9 @@ if str(ROOT) not in sys.path:
 from grand.dataio import DataFile
 from filters import filters
 from add_sim_MD import add_sim_MD
+from add_sim_MD.lookup_table import load_du_to_feb_map
 from FLT0 import run_FLT0
+from FLT0.thresholds import FLT0Thresholds, load_flt0_thresholds
 from FLT1 import run_FLT1
 from SLT import run_SLT
 
@@ -41,11 +43,15 @@ DEFAULT_DISTANCES_FILE = ROOT / "grand_daq/grand-daq/cfgs/detector_distances_May
 
 def process_event(
     fname_sim: str,
-    fname_md_prev: str,
     i_sim: int,
-    i_md_prev: int,
-    i_md_next: int,
     slt_pipeline: run_SLT.SLTPipeline,
+    fname_FLT0_thresholds,
+    fname_MD_lookup_table=None,
+    sim_timestamp: float = None,
+    fname_DU_to_FEB=None,
+    fname_md_prev: str = None,
+    i_md_prev: int = None,
+    i_md_next: int = None,
     fname_md_next: str = None,
     flt0_params: dict = None,
     flt1_score_min: float = 0.0,
@@ -60,20 +66,27 @@ def process_event(
     -----------
     fname_sim: str
         The filename of the simulation.
-    fname_md_prev: str
-        The filename of the first MD file.
     i_sim: int
         The index of the event to be simulated.
-    i_md_prev: int
-        The index of the first half the background trace.
-    i_md_next: int
-        The index of the second half the background trace.
     slt_pipeline: run_SLT.SLTPipeline
         The SLT trigger configurations.
-    fname_md_next: str, optional
-        The filename of the second MD file (defaults to fname_md_prev).
+    fname_FLT0_thresholds: str, Path or FLT0Thresholds
+        MANDATORY. The FEB-dependent FLT0 threshold file (header: feb_id th1_x th2_x th1_y th2_y),
+        or an already loaded FLT0Thresholds object. A DU whose FEB is unknown or has no
+        threshold entry is skipped in FLT0.
+    fname_MD_lookup_table: str, Path or MDLookupTable, optional
+        The MD lookup table. If given, the DU-dependent MD addition is used (each DU gets the
+        MD of its own FEB, closest in time to sim_timestamp).
+    sim_timestamp: float, optional
+        Timestamp (s) of the simulated event for the MD lookup (DU-dependent mode only).
+    fname_DU_to_FEB: str, Path or dict, optional
+        The DU ID -> FEB ID mapping (defaults to add_sim_MD/GP65_DUID_FEBID_from_json.txt).
+        Used for both the MD addition and the FLT0 thresholds.
+    fname_md_prev, i_md_prev, i_md_next, fname_md_next: optional
+        Legacy uniform MD addition (one MD trace for all DUs). Used only if
+        fname_MD_lookup_table is None; fname_md_prev, i_md_prev and i_md_next are then required.
     flt0_params: dict
-        The FLT0 parameters with threshold and time settings.
+        The FLT0 timing/crossing parameters (th1/th2 are NOT taken from here).
     flt1_score_min: float
         The minimum correlation score for FLT1 at the DU level.
     min_flt1_dus: int
@@ -83,24 +96,50 @@ def process_event(
     if_filter: bool
         If True, applies notch + FIR filter. If False, skips filtering.
     """
+    if fname_FLT0_thresholds is None:
+        raise ValueError("fname_FLT0_thresholds is mandatory: the FLT0 thresholds are FEB-dependent and come from a file.")
+    if isinstance(fname_FLT0_thresholds, FLT0Thresholds):
+        flt0_thresholds = fname_FLT0_thresholds
+    else:
+        flt0_thresholds = load_flt0_thresholds(fname_FLT0_thresholds)
+
     if flt0_params is None:
         flt0_params = {
-            "th1": 60,
-            "th2": 45,
             "t_quiet": 200,
             "t_period": 500,
             "t_sepmax": 25,
             "nc_min": 2,
             "nc_max": 9,
         }
+    if "th1" in flt0_params or "th2" in flt0_params:
+        logging.warning("flt0_params['th1'/'th2'] are ignored: the FLT0 thresholds come from the FEB threshold file.")
+
+    # DU ID -> FEB ID mapping (the same one is used by the MD addition)
+    du_to_feb = load_du_to_feb_map(fname_DU_to_FEB if fname_DU_to_FEB is not None else add_sim_MD.DEFAULT_MAPPING_FILE)
 
     # =========================================================================
     # Step 1 & 2: Read event and add MD background noise
     # =========================================================================
     logging.info(f"--- Event {i_sim}: Injecting MD noise ---")
-    trace_added, n_du = add_sim_MD.add_sim_md(
-        str(fname_sim), str(fname_md_prev), i_sim, i_md_prev, i_md_next, fname_md_next=str(fname_md_next) if fname_md_next else None
-    )
+    if fname_MD_lookup_table is not None:
+        trace_added, n_du = add_sim_MD.add_sim_md(
+            str(fname_sim), i_sim, fname_MD_lookup_table, sim_timestamp, fname_DU_to_FEB
+        )
+    else:
+        if fname_md_prev is None or i_md_prev is None or i_md_next is None:
+            raise ValueError("Without fname_MD_lookup_table, fname_md_prev, i_md_prev and i_md_next are required (legacy mode).")
+        trace_added, n_du = add_sim_MD.add_sim_md(
+            str(fname_sim), str(fname_md_prev), i_sim, i_md_prev, i_md_next, fname_md_next=str(fname_md_next) if fname_md_next else None
+        )
+
+    # Read the per-DU metadata of the simulated event once (DU IDs may be discontinuous)
+    file_sim = DataFile(str(fname_sim))
+    file_sim.tadc.get_entry(i_sim)
+    sim_du_ids = [int(x) for x in file_sim.tadc.du_id] if hasattr(file_sim.tadc, "du_id") else list(range(n_du))
+    sim_du_nsec = [int(x) for x in file_sim.tadc.du_nanoseconds] if hasattr(file_sim.tadc, "du_nanoseconds") else [0] * n_du
+    file_sim.close()
+    if len(sim_du_ids) != n_du:
+        raise RuntimeError(f"Event {i_sim}: {len(sim_du_ids)} DU IDs in the sim file but {n_du} DUs in the traces.")
 
     # Filter traces: Notch + FIR filter (if enabled)
     if if_filter:
@@ -122,14 +161,30 @@ def process_event(
     logging.info(f"--- Event {i_sim}: Running FLT0 on {n_du} DUs (Python backend: {use_python_flt0}) ---")
     flt0_triggered = np.zeros(n_du, dtype=bool)
 
-    for i_du in range(n_du):
+    # Loop over the simulated DU IDs (they may be discontinuous, e.g. 0, 2, 10, 20).
+    # i_du indexes the trace array; du_id is the real DU ID used to find the FEB.
+    for i_du, du_id in enumerate(sim_du_ids):
+        feb_id = du_to_feb.get(du_id)  # None -> no FEB deployed at this DU ID
+        du_thresholds = flt0_thresholds.get(feb_id) if feb_id is not None else None
+        if du_thresholds is None:
+            if feb_id is None:
+                cause = f"no FEB is mapped to DU ID {du_id}"
+            else:
+                cause = f"FEB {feb_id} has no entry in the threshold file"
+            logging.warning(
+                f"FLT0: skipping DU ID {du_id} (index {i_du}): "
+                f"No FEB at the DU ID or no threshold is given to the FEB. ({cause})"
+            )
+            continue
+
         triggered_du = False
-        # Evaluate channels (X and Y)
+        # Evaluate channels (X and Y are always channels 0 and 1)
         for i_ch in range(2):
+            th1, th2 = du_thresholds[i_ch]
             trace = trace_filtered[i_du][i_ch]
-            logging.debug(f"  trace max {np.max(trace)}, th1={flt0_params['th1']}")
+            logging.debug(f"  DU{du_id} (FEB {feb_id}) ch{i_ch}: trace max {np.max(trace)}, th1={th1}, th2={th2}")
             
-            if np.max(trace) <= flt0_params["th1"]:
+            if np.max(trace) <= th1:
                 # Preselection check: Skip FLT0 simulation if peak value doesn't reach threshold_t1
                 logging.debug(f"  FLT0: Skipping DU{i_du}-Ch{i_ch}/{n_du}")
                 continue
@@ -137,8 +192,8 @@ def process_event(
             if use_python_flt0:
                 trig = run_FLT0.run_trigger_py(
                     trace=trace,
-                    threshold_t1=flt0_params["th1"],
-                    threshold_t2=flt0_params["th2"],
+                    threshold_t1=th1,
+                    threshold_t2=th2,
                     tprev=flt0_params["t_quiet"],
                     tperiod=flt0_params["t_period"],
                     tcmax=flt0_params["t_sepmax"],
@@ -148,8 +203,8 @@ def process_event(
             else:
                 trig = run_FLT0.run_trigger_simulation(
                     samples=trace,
-                    threshold_t1=flt0_params["th1"],
-                    threshold_t2=flt0_params["th2"],
+                    threshold_t1=th1,
+                    threshold_t2=th2,
                     tprev=flt0_params["t_quiet"],
                     tperiod=flt0_params["t_period"],
                     tcmax=flt0_params["t_sepmax"],
@@ -175,15 +230,10 @@ def process_event(
     flt1_scores = []
     flt1_timestamps = []
 
-    file_sim = DataFile(str(fname_sim))
-    file_sim.tadc.get_entry(i_sim)
-
     for i_du in flt0_survivor_indices:
         i_du = int(i_du)
-        du_id = file_sim.tadc.du_id[i_du] if hasattr(file_sim.tadc, "du_id") else i_du
-        du_sec = file_sim.tadc.du_seconds[i_du] if hasattr(file_sim.tadc, "du_seconds") else 1_000_000_000
-        du_nsec = file_sim.tadc.du_nanoseconds[i_du] if hasattr(file_sim.tadc, "du_nanoseconds") else 0
-        ts_ns = int(du_nsec)  # Only take nanoseconds for 1-second bucket granularity
+        du_id = sim_du_ids[i_du]
+        ts_ns = sim_du_nsec[i_du]  # Only take nanoseconds for 1-second bucket granularity
 
         ch1_trace = trace_filtered[i_du][0].astype(np.int16)
         ch2_trace = trace_filtered[i_du][1].astype(np.int16)
@@ -209,8 +259,6 @@ def process_event(
             flt1_dus.append(du_id)
             flt1_scores.append(out0) # Keep uint16 score for SLT input
             flt1_timestamps.append(ts_ns)
-
-    file_sim.close()
 
     n_flt1_passed = len(flt1_dus)
     logging.info(f"FLT1 passed (correlation > {flt1_score_min}) for {n_flt1_passed} DUs.")

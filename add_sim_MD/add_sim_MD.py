@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('grand.dataio.data_tree').setLevel(logging.CRITICAL)
 
 
-DEFAULT_MAPPING_FILE = Path(__file__).resolve().parent / "GP65_DUID_FEBID.txt"
+DEFAULT_MAPPING_FILE = Path(__file__).resolve().parent / "GP65_DUID_FEBID_from_json.txt"
 
 
 def _add_sim_md_du_dependent(
@@ -22,7 +22,7 @@ def _add_sim_md_du_dependent(
     Internal helper: Add DU-dependent MD noise using a lookup table.
     For each DU in the simulated event, looks up the temporally closest MD entry (or 2 entries
     for 512-sample traces) from that DU's recorded background.
-    Maps simulated DU position ID to deployed hardware FEB ID via fname_DU_to_FEB (defaults to GP65_DUID_FEBID.txt).
+    Maps simulated DU position ID to deployed hardware FEB ID via fname_DU_to_FEB (defaults to GP65_DUID_FEBID_from_json.txt).
     If no FEB is deployed at that station, or if no MD data exists for that FEB, the trace is masked to zero.
     """
     table = load_lookup_table(fname_MD_lookup_table)
@@ -209,7 +209,7 @@ def add_sim_md(
         If None, automatically extracted from the simulation event's du_seconds/du_nanoseconds.
     fname_DU_to_FEB : str, Path, or dict, optional
         Path to mapping file (or dict) mapping simulated DU ID to hardware FEB ID.
-        Defaults to GP65_DUID_FEBID.txt if available. If a DU has no FEB mapped or
+        Defaults to GP65_DUID_FEBID_from_json.txt if available. If a DU has no FEB mapped or
         the FEB has no MD data, its trace is masked to zero.
 
     Returns:

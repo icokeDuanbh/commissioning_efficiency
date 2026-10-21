@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from run_full_pipeline import process_event, DEFAULT_SIM_FILE, DEFAULT_DISTANCES_FILE
+from FLT0.thresholds import load_flt0_thresholds
 from SLT import run_SLT
 
 
@@ -95,6 +96,21 @@ def run_md_trace_scan(
     min_flt1_dus = flt1_params.get("min_flt1_dus", 1)
     use_python_flt0 = flt0_params.get("use_python_flt0", True)
 
+    # FEB-dependent FLT0 thresholds are mandatory (loaded once for the whole scan)
+    thresholds_setting = flt0_params.get("thresholds_file")
+    if thresholds_setting is None:
+        raise ValueError("flt0_params.thresholds_file is mandatory in the config (FEB-dependent FLT0 thresholds).")
+    thresholds_path = Path(thresholds_setting)
+    if not thresholds_path.is_absolute():
+        thresholds_path = ROOT / thresholds_path
+    flt0_thresholds = load_flt0_thresholds(thresholds_path)
+    logging.info(f"Loaded FLT0 thresholds for {len(flt0_thresholds)} FEBs from {thresholds_path}")
+
+    # Optional DU ID -> FEB ID mapping (defaults to the shipped GP65 mapping)
+    fname_DU_to_FEB = config.get("input_sources", {}).get("du_to_feb_map")
+    if fname_DU_to_FEB is not None and not Path(fname_DU_to_FEB).is_absolute():
+        fname_DU_to_FEB = str(ROOT / fname_DU_to_FEB)
+
     antenna_dist_setting = slt_p.get("antenna_distances_file", str(DEFAULT_DISTANCES_FILE))
     antenna_dist_path = Path(antenna_dist_setting)
     if not antenna_dist_path.is_absolute():
@@ -126,11 +142,13 @@ def run_md_trace_scan(
 
         res = process_event(
             fname_sim=str(fname_sim),
-            fname_md_prev=str(fname_md_prev),
             i_sim=i_sim,
+            slt_pipeline=slt_pipeline,
+            fname_FLT0_thresholds=flt0_thresholds,
+            fname_DU_to_FEB=fname_DU_to_FEB,
+            fname_md_prev=str(fname_md_prev),
             i_md_prev=i_md_prev,
             i_md_next=i_md_next,
-            slt_pipeline=slt_pipeline,
             fname_md_next=str(fname_md_next),
             flt0_params=flt0_params,
             flt1_score_min=flt1_score_min,

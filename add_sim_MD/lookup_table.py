@@ -177,7 +177,8 @@ def load_du_to_feb_map(map_source: Optional[Union[dict, str, Path]]) -> Optional
 
     Supported file formats:
     - JSON: {"65001": 1032, ...}
-    - CSV / TSV / whitespace-separated text: '650XX  feb_id' per line (e.g. GP65_DUID_FEBID.txt)
+    - CSV / TSV / whitespace-separated text: 'du_id  feb_id' per line, where du_id is either the
+      short station ID (e.g. 1) or the 650XX form (e.g. 65001); see GP65_DUID_FEBID_from_json.txt
 
     Returns:
         Dict[int, int] mapping simulated DU ID -> hardware FEB ID.
