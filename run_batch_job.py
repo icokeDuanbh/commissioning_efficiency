@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from run_md_trace_scan import run_md_trace_scan
+from add_sim_MD.lookup_table import load_lookup_table
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -30,7 +31,10 @@ def run_batch_job(
     job_id: int,
     output_dir: str,
     manifest_csv: str = None,
-    entry_txt_file: str = None,
+    md_lookup_table_file: str = None,
+    t_start: float = None,
+    t_end: float = None,
+    t_step: float = None,
     showers_per_job: int = 5,
 ):
     out_base = Path(output_dir)
@@ -46,8 +50,8 @@ def run_batch_job(
     with open(config_path, "r") as f:
         config = json.load(f)
 
+    input_sources = config.get("input_sources", {})
     if manifest_csv is None:
-        input_sources = config.get("input_sources", {})
         manifest_csv = input_sources.get("sim_manifest_csv", "test_data/sim_manifest.csv")
 
     manifest_path = Path(manifest_csv)
@@ -56,6 +60,17 @@ def run_batch_job(
 
     if not manifest_path.exists():
         raise FileNotFoundError(f"Manifest CSV not found: {manifest_path}")
+
+    # Preload MD lookup table once for all showers in this batch job
+    if md_lookup_table_file is None:
+        md_lookup_table_file = input_sources.get("md_lookup_table")
+    if md_lookup_table_file is None:
+        raise ValueError("MD lookup table must be specified via --md_lookup_table_file or config['input_sources']['md_lookup_table'].")
+    lookup_path = Path(md_lookup_table_file)
+    if not lookup_path.is_absolute():
+        lookup_path = ROOT / lookup_path
+    md_lookup_table = load_lookup_table(lookup_path)
+    logging.info(f"Preloaded MD lookup table from {lookup_path} ({len(md_lookup_table.available_feb_ids)} FEBs).")
 
     # Read manifest rows into a list of dicts
     rows = []
@@ -99,7 +114,10 @@ def run_batch_job(
             i_sim=local_i_sim,
             out_file=str(shower_out_file),
             config=config,
-            entry_txt_file=entry_txt_file,
+            md_lookup_table_file=md_lookup_table,
+            t_start=t_start,
+            t_end=t_end,
+            t_step=t_step,
         )
 
     logging.info(f"--- Slurm Job {job_id} Finished Successfully ---")
@@ -126,10 +144,28 @@ if __name__ == "__main__":
         help="Path to sim_manifest.csv (defaults to config input_sources).",
     )
     parser.add_argument(
-        "--entry_txt_file",
+        "--md_lookup_table_file",
         type=str,
         default=None,
-        help="Path to global MD entry list file (defaults to config input_sources).",
+        help="Path to MD lookup table file (defaults to config input_sources.md_lookup_table).",
+    )
+    parser.add_argument(
+        "--t_start",
+        type=float,
+        default=None,
+        help="Scan start Unix timestamp in seconds (defaults to config scan_params.t_start).",
+    )
+    parser.add_argument(
+        "--t_end",
+        type=float,
+        default=None,
+        help="Scan end Unix timestamp in seconds (defaults to config scan_params.t_end).",
+    )
+    parser.add_argument(
+        "--t_step",
+        type=float,
+        default=None,
+        help="Scan step size in seconds (defaults to config scan_params.t_step).",
     )
     parser.add_argument(
         "--showers_per_job",
@@ -143,6 +179,9 @@ if __name__ == "__main__":
         job_id=args.job_id,
         output_dir=args.output_dir,
         manifest_csv=args.manifest_csv,
-        entry_txt_file=args.entry_txt_file,
+        md_lookup_table_file=args.md_lookup_table_file,
+        t_start=args.t_start,
+        t_end=args.t_end,
+        t_step=args.t_step,
         showers_per_job=args.showers_per_job,
     )

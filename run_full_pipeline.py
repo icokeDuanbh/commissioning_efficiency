@@ -46,13 +46,9 @@ def process_event(
     i_sim: int,
     slt_pipeline: run_SLT.SLTPipeline,
     fname_FLT0_thresholds,
-    fname_MD_lookup_table=None,
+    fname_MD_lookup_table,
     sim_timestamp: float = None,
     fname_DU_to_FEB=None,
-    fname_md_prev: str = None,
-    i_md_prev: int = None,
-    i_md_next: int = None,
-    fname_md_next: str = None,
     flt0_params: dict = None,
     flt1_score_min: float = 0.0,
     min_flt1_dus: int = 1,
@@ -74,17 +70,14 @@ def process_event(
         MANDATORY. The FEB-dependent FLT0 threshold file (header: feb_id th1_x th2_x th1_y th2_y),
         or an already loaded FLT0Thresholds object. A DU whose FEB is unknown or has no
         threshold entry is skipped in FLT0.
-    fname_MD_lookup_table: str, Path or MDLookupTable, optional
-        The MD lookup table. If given, the DU-dependent MD addition is used (each DU gets the
+    fname_MD_lookup_table: str, Path or MDLookupTable
+        MANDATORY. The MD lookup table for DU-dependent MD addition (each DU gets the
         MD of its own FEB, closest in time to sim_timestamp).
     sim_timestamp: float, optional
-        Timestamp (s) of the simulated event for the MD lookup (DU-dependent mode only).
+        Timestamp (s) of the simulated event for the MD lookup.
     fname_DU_to_FEB: str, Path or dict, optional
         The DU ID -> FEB ID mapping (defaults to add_sim_MD/GP65_DUID_FEBID_from_json.txt).
         Used for both the MD addition and the FLT0 thresholds.
-    fname_md_prev, i_md_prev, i_md_next, fname_md_next: optional
-        Legacy uniform MD addition (one MD trace for all DUs). Used only if
-        fname_MD_lookup_table is None; fname_md_prev, i_md_prev and i_md_next are then required.
     flt0_params: dict
         The FLT0 timing/crossing parameters (th1/th2 are NOT taken from here).
     flt1_score_min: float
@@ -102,6 +95,9 @@ def process_event(
         flt0_thresholds = fname_FLT0_thresholds
     else:
         flt0_thresholds = load_flt0_thresholds(fname_FLT0_thresholds)
+
+    if fname_MD_lookup_table is None:
+        raise ValueError("fname_MD_lookup_table is mandatory: MD addition is DU-dependent and requires a lookup table.")
 
     if flt0_params is None:
         flt0_params = {
@@ -121,16 +117,13 @@ def process_event(
     # Step 1 & 2: Read event and add MD background noise
     # =========================================================================
     logging.info(f"--- Event {i_sim}: Injecting MD noise ---")
-    if fname_MD_lookup_table is not None:
-        trace_added, n_du = add_sim_MD.add_sim_md(
-            str(fname_sim), i_sim, fname_MD_lookup_table, sim_timestamp, fname_DU_to_FEB
-        )
-    else:
-        if fname_md_prev is None or i_md_prev is None or i_md_next is None:
-            raise ValueError("Without fname_MD_lookup_table, fname_md_prev, i_md_prev and i_md_next are required (legacy mode).")
-        trace_added, n_du = add_sim_MD.add_sim_md(
-            str(fname_sim), str(fname_md_prev), i_sim, i_md_prev, i_md_next, fname_md_next=str(fname_md_next) if fname_md_next else None
-        )
+    trace_added, n_du = add_sim_MD.add_sim_md(
+        str(fname_sim),
+        i_sim,
+        fname_MD_lookup_table,
+        sim_timestamp=sim_timestamp,
+        fname_DU_to_FEB=du_to_feb,
+    )
 
     # Read the per-DU metadata of the simulated event once (DU IDs may be discontinuous)
     file_sim = DataFile(str(fname_sim))

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Script to scan MD background traces for a fixed simulation event.
+Script to scan MD background traces across a uniform time grid for a fixed simulation event.
 
-Reads entry indices and relative timestamps from a specified text file,
-iterates through consecutive pairs (i_md_prev, i_md_next), passes them to
-process_event() from run_full_pipeline.py, and outputs the trigger results
-along with relative timestamps.
+Given an MD lookup table and a uniform timestamp grid [t_start, t_end) with step t_step (in seconds),
+iterates through each target timestamp `t_scan`, passes it as `sim_timestamp` to `process_event()`
+from `run_full_pipeline.py` (which injects the temporally closest MD trace per FEB), and outputs
+the trigger results along with `t_scan`.
 """
 
 import sys
@@ -13,12 +13,15 @@ import os
 from pathlib import Path
 import numpy as np
 import logging
+import json
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from run_full_pipeline import process_event, DEFAULT_SIM_FILE, DEFAULT_DISTANCES_FILE
+from add_sim_MD import add_sim_MD
+from add_sim_MD.lookup_table import MDLookupTable, load_lookup_table, load_du_to_feb_map
 from FLT0.thresholds import load_flt0_thresholds
 from SLT import run_SLT
 
@@ -26,8 +29,6 @@ from SLT import run_SLT
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logging.getLogger('grand.dataio.data_tree').setLevel(logging.CRITICAL)
-
-import json
 
 DEFAULT_CONFIG_FILE = ROOT / "test_data/pipeline_config.json"
 
@@ -37,10 +38,37 @@ def run_md_trace_scan(
     i_sim: int = 0,
     out_file: str = None,
     config: dict = None,
-    entry_txt_file: str = None,
+    md_lookup_table_file=None,
+    t_start: float = None,
+    t_end: float = None,
+    t_step: float = None,
 ):
     """
-    Run pipeline across consecutive MD trace pairs for a given simulation event index.
+    Run pipeline across a uniform time grid [t_start, t_end) with step t_step (s)
+    for a given simulation event index.
+
+    Parameters
+    ----------
+    fname_sim : str
+        Path to simulation ROOT file.
+    i_sim : int
+        Simulation event entry index.
+    out_file : str, optional
+        Output file path (.npz or .txt).
+    config : dict, optional
+        Pipeline configuration dictionary (loaded from DEFAULT_CONFIG_FILE if None).
+    md_lookup_table_file : str, Path, or MDLookupTable, optional
+        Path to MD lookup table file (or preloaded MDLookupTable). Defaults to
+        `config["input_sources"]["md_lookup_table"]`.
+    t_start : float, optional
+        Start of the scan in absolute Unix timestamp (seconds). Defaults to
+        `config["scan_params"]["t_start"]`.
+    t_end : float, optional
+        End of the scan in absolute Unix timestamp (seconds). Defaults to
+        `config["scan_params"]["t_end"]`.
+    t_step : float, optional
+        Step size of the scan in seconds. Defaults to
+        `config["scan_params"]["t_step"]`.
     """
     if config is None:
         if DEFAULT_CONFIG_FILE.exists():
@@ -49,39 +77,52 @@ def run_md_trace_scan(
         else:
             raise ValueError(f"No config dict provided and default config not found at {DEFAULT_CONFIG_FILE}")
 
-    if entry_txt_file is None:
-        input_sources = config.get("input_sources", {})
-        entry_txt_file = input_sources.get("md_entry_file", "test_data/md_entries_global_1055.txt")
+    input_sources = config.get("input_sources", {})
+    scan_params = config.get("scan_params", {})
 
-    entry_txt_path = Path(entry_txt_file)
-    if not entry_txt_path.is_absolute():
-        entry_txt_path = ROOT / entry_txt_path
+    if md_lookup_table_file is None:
+        md_lookup_table_file = input_sources.get("md_lookup_table")
+    if md_lookup_table_file is None:
+        raise ValueError("MD lookup table must be provided via md_lookup_table_file or config['input_sources']['md_lookup_table'].")
 
-    if not entry_txt_path.exists():
-        raise FileNotFoundError(f"Entry text file not found: {entry_txt_path}")
+    if isinstance(md_lookup_table_file, MDLookupTable):
+        md_lookup_table = md_lookup_table_file
+    else:
+        lookup_path = Path(md_lookup_table_file)
+        if not lookup_path.is_absolute():
+            lookup_path = ROOT / lookup_path
+        md_lookup_table = load_lookup_table(lookup_path)
+        logging.info(f"Loaded MD lookup table from {lookup_path} ({len(md_lookup_table.available_feb_ids)} FEBs).")
 
-    # Load 3-column entry list: file_path (str), entry_index (int), relative_time_sec (float)
-    file_paths = []
-    entries = []
-    rel_times = []
+    if t_start is None:
+        t_start = scan_params.get("t_start")
+    if t_end is None:
+        t_end = scan_params.get("t_end")
+    if t_step is None:
+        t_step = scan_params.get("t_step")
 
-    with open(entry_txt_path, "r") as f:
-        header = f.readline()  # Skip header
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            parts = line.split()
-            if len(parts) >= 3:
-                file_paths.append(parts[0])
-                entries.append(int(parts[1]))
-                rel_times.append(float(parts[2]))
+    if t_start is None or t_end is None or t_step is None:
+        raise ValueError(
+            "t_start, t_end, and t_step (in seconds) are required for the uniform time grid scan "
+            "(pass as arguments or set in config['scan_params'])."
+        )
 
-    n_entries = len(entries)
-    if n_entries < 2:
-        raise ValueError(f"Need at least 2 entries in {entry_txt_path}, found {n_entries}")
+    t_start = float(t_start)
+    t_end = float(t_end)
+    t_step = float(t_step)
+    if t_step <= 0:
+        raise ValueError(f"t_step must be positive, got {t_step}.")
+    if t_end <= t_start:
+        raise ValueError(f"t_end ({t_end}) must be greater than t_start ({t_start}).")
 
-    logging.info(f"Loaded {n_entries} global MD entries from {entry_txt_path.name}.")
+    scan_timestamps = np.arange(t_start, t_end, t_step, dtype=np.float64)
+    n_steps = len(scan_timestamps)
+    if n_steps == 0:
+        raise ValueError(f"Empty scan timestamp grid for t_start={t_start}, t_end={t_end}, t_step={t_step}.")
+
+    logging.info(
+        f"Uniform time grid: t_start={t_start:.6f}s, t_end={t_end:.6f}s, t_step={t_step:.6f}s ({n_steps} steps)."
+    )
     logging.info(f"Simulation File: {fname_sim}")
     logging.info(f"Evaluating simulation event i_sim = {i_sim}")
 
@@ -106,10 +147,11 @@ def run_md_trace_scan(
     flt0_thresholds = load_flt0_thresholds(thresholds_path)
     logging.info(f"Loaded FLT0 thresholds for {len(flt0_thresholds)} FEBs from {thresholds_path}")
 
-    # Optional DU ID -> FEB ID mapping (defaults to the shipped GP65 mapping)
-    fname_DU_to_FEB = config.get("input_sources", {}).get("du_to_feb_map")
+    # DU ID -> FEB ID mapping (loaded once for the whole scan; defaults to the shipped GP65 mapping)
+    fname_DU_to_FEB = input_sources.get("du_to_feb_map")
     if fname_DU_to_FEB is not None and not Path(fname_DU_to_FEB).is_absolute():
         fname_DU_to_FEB = str(ROOT / fname_DU_to_FEB)
+    du_to_feb = load_du_to_feb_map(fname_DU_to_FEB if fname_DU_to_FEB is not None else add_sim_MD.DEFAULT_MAPPING_FILE)
 
     antenna_dist_setting = slt_p.get("antenna_distances_file", str(DEFAULT_DISTANCES_FILE))
     antenna_dist_path = Path(antenna_dist_setting)
@@ -130,26 +172,18 @@ def run_md_trace_scan(
 
     results = []
 
-    # Iterate through consecutive pairs
-    for idx in range(n_entries - 1):
-        fname_md_prev = file_paths[idx]
-        fname_md_next = file_paths[idx + 1]
-        i_md_prev = entries[idx]
-        i_md_next = entries[idx + 1]
-        rel_time = rel_times[idx]
-
-        logging.info(f"[{idx + 1}/{n_entries - 1}] Running pair ({Path(fname_md_prev).name}:{i_md_prev}, {Path(fname_md_next).name}:{i_md_next}) at t_rel={rel_time:.6f}s")
+    # Iterate through uniform timestamp grid
+    for idx, t_scan in enumerate(scan_timestamps):
+        logging.info(f"[{idx + 1}/{n_steps}] Scanning at t_scan={t_scan:.6f}s")
 
         res = process_event(
             fname_sim=str(fname_sim),
             i_sim=i_sim,
             slt_pipeline=slt_pipeline,
             fname_FLT0_thresholds=flt0_thresholds,
-            fname_DU_to_FEB=fname_DU_to_FEB,
-            fname_md_prev=str(fname_md_prev),
-            i_md_prev=i_md_prev,
-            i_md_next=i_md_next,
-            fname_md_next=str(fname_md_next),
+            fname_MD_lookup_table=md_lookup_table,
+            sim_timestamp=float(t_scan),
+            fname_DU_to_FEB=du_to_feb,
             flt0_params=flt0_params,
             flt1_score_min=flt1_score_min,
             min_flt1_dus=min_flt1_dus,
@@ -163,7 +197,7 @@ def run_md_trace_scan(
 
         logging.info(f"  -> Triggered: {trig} (FLT0: {n_flt0}, FLT1: {n_flt1})")
 
-        results.append((rel_time, int(trig), n_flt0, n_flt1))
+        results.append((float(t_scan), int(trig), n_flt0, n_flt1))
 
     results_arr = np.array(results)
 
@@ -173,7 +207,7 @@ def run_md_trace_scan(
         if out_path.suffix == ".npz":
             np.savez_compressed(
                 out_path,
-                relative_time_sec=results_arr[:, 0],
+                t_scan=results_arr[:, 0],
                 triggered=results_arr[:, 1].astype(bool),
                 n_flt0_passed=results_arr[:, 2].astype(np.int16),
                 n_flt1_passed=results_arr[:, 3].astype(np.int16),
@@ -183,7 +217,7 @@ def run_md_trace_scan(
                 out_path,
                 results_arr,
                 fmt=["%.9f", "%d", "%d", "%d"],
-                header="relative_time_sec triggered n_flt0_passed n_flt1_passed",
+                header="t_scan triggered n_flt0_passed n_flt1_passed",
                 comments="",
             )
         logging.info(f"Saved results to {out_path}")
