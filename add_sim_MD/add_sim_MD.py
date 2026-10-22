@@ -37,12 +37,12 @@ def calibrate_sim_trace(
 ) -> np.ndarray:
     """
     Apply frequency-dependent calibration (30 - 250 MHz) to a simulated trace via FFT -> IFFT,
-    leaving frequencies outside the calibrated band unscaled (1.0) and rounding to int.
+    clamping frequencies below 30 MHz to the 30 MHz calibration value and rounding to int.
     """
     n_samples = len(trace_sim)
     freqs_mhz = np.abs(np.fft.fftfreq(n_samples, d=1.0 / fs_mhz))
 
-    gain = np.interp(freqs_mhz, freq_calib_mhz, corr_calib, left=1.0, right=1.0)
+    gain = np.interp(freqs_mhz, freq_calib_mhz, corr_calib, left=corr_calib[0], right=corr_calib[-1])
 
     fft_sim = np.fft.fft(trace_sim)
     trace_calibrated = np.fft.ifft(fft_sim * gain).real
