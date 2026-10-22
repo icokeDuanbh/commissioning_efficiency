@@ -9,6 +9,45 @@ logging.getLogger('grand.dataio.data_tree').setLevel(logging.CRITICAL)
 
 
 DEFAULT_MAPPING_FILE = Path(__file__).resolve().parent / "GP65_DUID_FEBID_from_json.txt"
+DEFAULT_CALIB_DIR = Path(__file__).resolve().parent / "calibration"
+
+
+def load_calibration_curve(feb_id: int, pol: str, calib_dir: Path = DEFAULT_CALIB_DIR):
+    """
+    Load (freq_MHz, correction_DU_specific) for a given FEB ID and polarization ('X' or 'Y').
+    Returns None if the calibration file does not exist.
+    """
+    pol_folder = f"{pol.upper()}raw"
+    csv_path = Path(calib_dir) / pol_folder / f"DU{feb_id}_{pol_folder}_RFchain_from_sqrtG_detailed.csv"
+    if not csv_path.exists():
+        return None
+
+    # Column 0: freq_MHz, Column 6: correction_DU_specific
+    freq_mhz, corr_du = np.loadtxt(
+        csv_path, delimiter=",", skiprows=1, usecols=(0, 6), unpack=True
+    )
+    return freq_mhz, corr_du
+
+
+def calibrate_sim_trace(
+    trace_sim: np.ndarray,
+    freq_calib_mhz: np.ndarray,
+    corr_calib: np.ndarray,
+    fs_mhz: float = 500.0,
+) -> np.ndarray:
+    """
+    Apply frequency-dependent calibration (30 - 250 MHz) to a simulated trace via FFT -> IFFT,
+    leaving frequencies outside the calibrated band unscaled (1.0) and rounding to int.
+    """
+    n_samples = len(trace_sim)
+    freqs_mhz = np.abs(np.fft.fftfreq(n_samples, d=1.0 / fs_mhz))
+
+    gain = np.interp(freqs_mhz, freq_calib_mhz, corr_calib, left=1.0, right=1.0)
+
+    fft_sim = np.fft.fft(trace_sim)
+    trace_calibrated = np.fft.ifft(fft_sim * gain).real
+
+    return np.rint(trace_calibrated).astype(np.int32)
 
 
 def add_sim_md(
@@ -17,6 +56,7 @@ def add_sim_md(
     fname_MD_lookup_table,
     sim_timestamp=None,
     fname_DU_to_FEB=None,
+    calib_dir=DEFAULT_CALIB_DIR,
 ):
     """
     Add DU-dependent MD background noise to simulated traces using a lookup table.
@@ -73,11 +113,18 @@ def add_sim_md(
 
     trace_added = np.zeros((n_du, 3, length_sim))
     file_cache = {}
+    calib_cache = {}
 
     def _get_df(path_str):
         if path_str not in file_cache:
             file_cache[path_str] = DataFile(path_str)
         return file_cache[path_str]
+
+    def _get_calib(feb_id, pol):
+        key = (feb_id, pol)
+        if key not in calib_cache:
+            calib_cache[key] = load_calibration_curve(feb_id, pol, calib_dir=calib_dir)
+        return calib_cache[key]
 
     try:
         for i_du in range(n_du):
@@ -91,6 +138,15 @@ def add_sim_md(
                     continue
             else:
                 logging.warning(f"No DU-to-FEB mapping available for DU #{i_du} (station {sim_du_id}); masking trace to zero.")
+                trace_added[i_du] = 0.0
+                continue
+
+            calib_x = _get_calib(target_feb_id, "X")
+            calib_y = _get_calib(target_feb_id, "Y")
+            if calib_x is None or calib_y is None:
+                logging.warning(
+                    f"Missing X/Y calibration file for FEB ID {target_feb_id} (station {sim_du_id}); masking trace to zero."
+                )
                 trace_added[i_du] = 0.0
                 continue
 
@@ -129,8 +185,11 @@ def add_sim_md(
                     f"Unsupported MD trace length ({length_MD}) for FEB {target_feb_id} with sim length ({length_sim})."
                 )
 
-            trace_added[i_du][0] = trace_md_x + file_sim.tadc.trace_ch[i_du][0]
-            trace_added[i_du][1] = trace_md_y + file_sim.tadc.trace_ch[i_du][1]
+            sim_x_cal = calibrate_sim_trace(np.asarray(file_sim.tadc.trace_ch[i_du][0]), calib_x[0], calib_x[1])
+            sim_y_cal = calibrate_sim_trace(np.asarray(file_sim.tadc.trace_ch[i_du][1]), calib_y[0], calib_y[1])
+
+            trace_added[i_du][0] = trace_md_x + sim_x_cal
+            trace_added[i_du][1] = trace_md_y + sim_y_cal
             trace_added[i_du][2] = trace_md_z + file_sim.tadc.trace_ch[i_du][2]
 
     finally:
