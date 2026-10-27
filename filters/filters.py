@@ -2,8 +2,11 @@ import numpy as np
 import scipy.signal as signal
 import re
 import xml.etree.ElementTree as ET
+from numba import njit
 
 def get_coefficients_from_xci(xci_path="/Users/xishui/Dropbox/Project/GRAND/Event_injector/filters/fir_compiler_lp_120M.xci"):
+
+
     """Parses the CoefficientVector from the Xilinx XCI file."""
     tree = ET.parse(xci_path)
     root = tree.getroot()
@@ -56,11 +59,13 @@ def apply_fir_filter(x, coef=coef_float):
     y_int = signal.lfilter(coefs_int, 1, x_float)
     # Scale back down by 2^16 (65536)
     y_int_scaled_truncated = (y_int // 65536).astype(np.int32)
-    latency = 49 + 11 # Empirical shift to match the online/offline filters
+    latency = 60 #49 + 11 # Empirical shift to match the online/offline filters
     
     y_int_truncated_shifted = np.zeros_like(x, dtype=int)
     y_int_truncated_shifted[latency:] = y_int_scaled_truncated[:-latency]
+
     return y_int_truncated_shifted
+
 
 
 def compute_notch_coefficients(fn, r, fs=500e6):
@@ -88,7 +93,7 @@ def compute_notch_coefficients(fn, r, fs=500e6):
 
     return dict(a1=a1, a2=a2, b1=b1, b2=b2, b3=b3, b4=b4, b5=b5, b6=b6)
 
-
+@njit(fastmath=False)
 def apply_notch_filter(X, fn, r, fs=500e6):
     """
     Apply the notch filter to input signal X.
@@ -102,9 +107,19 @@ def apply_notch_filter(X, fn, r, fs=500e6):
     Returns:
         Y1, Y2, Y: Intermediate and final filtered signals as numpy arrays
     """
-    c = compute_notch_coefficients(fn, r, fs)
-    a1, a2 = c['a1'], c['a2']
-    b1, b2, b3, b4, b5, b6 = c['b1'], c['b2'], c['b3'], c['b4'], c['b5'], c['b6']
+    #c = compute_notch_coefficients(fn, r, fs)
+    #a1, a2 = c['a1'], c['a2']
+    #b1, b2, b3, b4, b5, b6 = c['b1'], c['b2'], c['b3'], c['b4'], c['b5'], c['b6']
+    nu = 2 * np.pi * fn / fs
+
+    a1 = 2 * (r**4) * np.cos(4 * nu)
+    a2 = -(r**8)
+    b1 = -2 * np.cos(nu)
+    b2 = 1
+    b3 = 2 * r * np.cos(nu)
+    b4 = r * r
+    b5 = 2 * (r**2) * np.cos(2 * nu)
+    b6 = r**4 # I don’t see why we need to call a function, store results in a dictionnary and then reassign variables
 
     N = len(X)
     Y1 = np.zeros(N)
