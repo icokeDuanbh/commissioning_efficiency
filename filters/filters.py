@@ -3,7 +3,7 @@ import scipy.signal as signal
 import re
 import xml.etree.ElementTree as ET
 
-def get_coefficients_from_xci(xci_path="/Users/xishui/Dropbox/Project/GRAND/Event_injector/filters/fir_compiler_lp_120M.xci"):
+def get_coefficients_from_xci(xci_path="fir_compiler_lp_120M.xci"):
     """Parses the CoefficientVector from the Xilinx XCI file."""
     tree = ET.parse(xci_path)
     root = tree.getroot()

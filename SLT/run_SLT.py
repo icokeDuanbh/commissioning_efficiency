@@ -350,7 +350,7 @@ class SLTPipeline:
 if __name__ == "__main__":
     DISTANCES = str(
         SLT_DIR.parent /
-        "/Users/xishui/Dropbox/Project/GRAND/Event_injector/grand_daq/grand-daq/cfgs/detector_distances_May24_v2.txt"
+        "../grand_daq/grand-daq/cfgs/detector_distances_May24_v2.txt"
     )
 
     pipeline = SLTPipeline(
