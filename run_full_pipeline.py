@@ -49,6 +49,7 @@ def process_event(
     fname_MD_lookup_table,
     sim_timestamp: float = None,
     fname_DU_to_FEB=None,
+    fname_duplicate_log=None,
     flt0_params: dict = None,
     flt1_score_min: float = 0.0,
     min_flt1_dus: int = 1,
@@ -74,10 +75,14 @@ def process_event(
         MANDATORY. The MD lookup table for DU-dependent MD addition (each DU gets the
         MD of its own FEB, closest in time to sim_timestamp).
     sim_timestamp: float, optional
-        Timestamp (s) of the simulated event for the MD lookup.
+        Timestamp (s) of the simulated event for the MD lookup and duplicate history selection.
     fname_DU_to_FEB: str, Path or dict, optional
         The DU ID -> FEB ID mapping (defaults to add_sim_MD/GP65_DUID_FEBID_from_json.txt).
         Used for both the MD addition and the FLT0 thresholds.
+    fname_duplicate_log: str, Path or DuplicateRejectHistory, optional
+        Path to the online DAQ DuplicateRejectLog file (or a preloaded DuplicateRejectHistory
+        instance). When provided, resets T3Filter duplicate history and seeds the past N
+        (duplicate_history_size) events prior to sim_timestamp.
     flt0_params: dict
         The FLT0 timing/crossing parameters (th1/th2 are NOT taken from here).
     flt1_score_min: float
@@ -113,6 +118,31 @@ def process_event(
     # DU ID -> FEB ID mapping (the same one is used by the MD addition)
     du_to_feb = load_du_to_feb_map(fname_DU_to_FEB if fname_DU_to_FEB is not None else add_sim_MD.DEFAULT_MAPPING_FILE)
 
+    # Read the per-DU metadata of the simulated event once (DU IDs may be discontinuous)
+    file_sim = DataFile(str(fname_sim))
+    file_sim.tadc.get_entry(i_sim)
+    sim_du_ids = [int(x) for x in file_sim.tadc.du_id] if hasattr(file_sim.tadc, "du_id") else []
+    sim_du_nsec = [int(x) for x in file_sim.tadc.du_nanoseconds] if hasattr(file_sim.tadc, "du_nanoseconds") else []
+    if sim_timestamp is None:
+        if hasattr(file_sim.tadc, "du_seconds") and len(file_sim.tadc.du_seconds) > 0:
+            sec = float(file_sim.tadc.du_seconds[0])
+            nsec = float(sim_du_nsec[0]) if len(sim_du_nsec) > 0 else 0.0
+            sim_timestamp = sec + nsec / 1e9
+    file_sim.close()
+
+    # Reset and seed SLT duplicate history with the past N events prior to sim_timestamp
+    if fname_duplicate_log is not None:
+        if sim_timestamp is None:
+            raise ValueError("sim_timestamp is required when fname_duplicate_log is provided.")
+        n_seeded = slt_pipeline.preload_duplicate_history(
+            fname_duplicate_log,
+            target_timestamp=float(sim_timestamp),
+            reset=True,
+        )
+        logging.debug(
+            f"--- Event {i_sim}: Seeded {n_seeded} past duplicate-reject events for sim_timestamp={sim_timestamp:.9f}s ---"
+        )
+
     # =========================================================================
     # Step 1 & 2: Read event and add MD background noise
     # =========================================================================
@@ -125,12 +155,10 @@ def process_event(
         fname_DU_to_FEB=du_to_feb,
     )
 
-    # Read the per-DU metadata of the simulated event once (DU IDs may be discontinuous)
-    file_sim = DataFile(str(fname_sim))
-    file_sim.tadc.get_entry(i_sim)
-    sim_du_ids = [int(x) for x in file_sim.tadc.du_id] if hasattr(file_sim.tadc, "du_id") else list(range(n_du))
-    sim_du_nsec = [int(x) for x in file_sim.tadc.du_nanoseconds] if hasattr(file_sim.tadc, "du_nanoseconds") else [0] * n_du
-    file_sim.close()
+    if not sim_du_ids:
+        sim_du_ids = list(range(n_du))
+    if not sim_du_nsec:
+        sim_du_nsec = [0] * n_du
     if len(sim_du_ids) != n_du:
         raise RuntimeError(f"Event {i_sim}: {len(sim_du_ids)} DU IDs in the sim file but {n_du} DUs in the traces.")
 

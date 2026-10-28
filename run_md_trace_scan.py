@@ -24,6 +24,7 @@ from add_sim_MD import add_sim_MD
 from add_sim_MD.lookup_table import MDLookupTable, load_lookup_table, load_du_to_feb_map
 from FLT0.thresholds import load_flt0_thresholds
 from SLT import run_SLT
+from SLT.load_duplicate_history import DuplicateRejectHistory, load_duplicate_history
 
 
 # Setup logging
@@ -39,6 +40,7 @@ def run_md_trace_scan(
     out_file: str = None,
     config: dict = None,
     md_lookup_table_file=None,
+    duplicate_reject_log_file=None,
     t_start: float = None,
     t_end: float = None,
     t_step: float = None,
@@ -60,6 +62,10 @@ def run_md_trace_scan(
     md_lookup_table_file : str, Path, or MDLookupTable, optional
         Path to MD lookup table file (or preloaded MDLookupTable). Defaults to
         `config["input_sources"]["md_lookup_table"]`.
+    duplicate_reject_log_file : str, Path, or DuplicateRejectHistory, optional
+        Path to online DAQ DuplicateRejectLog file (or preloaded DuplicateRejectHistory).
+        Defaults to `config["input_sources"]["duplicate_reject_log"]`. Used when
+        `duplicate_filter_enable` is True to seed the past N events prior to each `t_scan`.
     t_start : float, optional
         Start of the scan in absolute Unix timestamp (seconds). Defaults to
         `config["scan_params"]["t_start"]`.
@@ -158,16 +164,47 @@ def run_md_trace_scan(
     if not antenna_dist_path.is_absolute():
         antenna_dist_path = ROOT / antenna_dist_setting
 
+    duplicate_filter_enable = bool(slt_p.get("duplicate_filter_enable", False))
+    duplicate_time_diff_ns = int(slt_p.get("duplicate_time_diff_ns", 100))
+    duplicate_min_pair = int(slt_p.get("duplicate_min_pair", 2))
+    duplicate_history_size = int(slt_p.get("duplicate_history_size", 10))
+
+    # Preload DuplicateRejectLog history if duplicate_filter_enable is True (or explicitly provided)
+    duplicate_history = None
+    if duplicate_filter_enable or duplicate_reject_log_file is not None:
+        if duplicate_reject_log_file is None:
+            duplicate_reject_log_file = input_sources.get("duplicate_reject_log") or slt_p.get("duplicate_reject_log")
+        if duplicate_reject_log_file is None:
+            raise ValueError(
+                "Duplicate reject log must be provided via duplicate_reject_log_file or "
+                "config['input_sources']['duplicate_reject_log'] when duplicate_filter_enable is True."
+            )
+        if isinstance(duplicate_reject_log_file, DuplicateRejectHistory):
+            duplicate_history = duplicate_reject_log_file
+        else:
+            dup_log_path = Path(duplicate_reject_log_file)
+            if not dup_log_path.is_absolute():
+                dup_log_path = ROOT / dup_log_path
+            duplicate_history = load_duplicate_history(dup_log_path)
+            logging.info(
+                f"Loaded DuplicateRejectLog from {dup_log_path} ({len(duplicate_history)} events, "
+                f"range=[{duplicate_history.min_timestamp}, {duplicate_history.max_timestamp}])."
+            )
+
     # Initialize SLT pipeline dynamically from config
     slt_pipeline = run_SLT.SLTPipeline(
         trigger_type=slt_p.get("trigger_type", 2),
         nhit_threshold=slt_p.get("nhit_threshold", 5),
         time_window_ns=slt_p.get("time_window_ns", 15000),
         causal_window_enabled=slt_p.get("causal_window_enabled", False),
+        causal_tolerance_ns=slt_p.get("causal_tolerance_ns", 100.0),
         antenna_distances_file=str(antenna_dist_path),
         template_match_filter_enable=slt_p.get("template_match_filter_enable", True),
         template_match_coefficient=slt_p.get("template_match_coefficient", 0.7),
-        duplicate_filter_enable=slt_p.get("duplicate_filter_enable", False),
+        duplicate_filter_enable=duplicate_filter_enable,
+        duplicate_time_diff_ns=duplicate_time_diff_ns,
+        duplicate_min_pair=duplicate_min_pair,
+        duplicate_history_size=duplicate_history_size,
     )
 
     results = []
@@ -184,6 +221,7 @@ def run_md_trace_scan(
             fname_MD_lookup_table=md_lookup_table,
             sim_timestamp=float(t_scan),
             fname_DU_to_FEB=du_to_feb,
+            fname_duplicate_log=duplicate_history,
             flt0_params=flt0_params,
             flt1_score_min=flt1_score_min,
             min_flt1_dus=min_flt1_dus,

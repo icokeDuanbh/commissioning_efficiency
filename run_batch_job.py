@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from run_md_trace_scan import run_md_trace_scan
 from add_sim_MD.lookup_table import load_lookup_table
+from SLT.load_duplicate_history import load_duplicate_history
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -32,6 +33,7 @@ def run_batch_job(
     output_dir: str,
     manifest_csv: str = None,
     md_lookup_table_file: str = None,
+    duplicate_reject_log_file: str = None,
     t_start: float = None,
     t_end: float = None,
     t_step: float = None,
@@ -71,6 +73,27 @@ def run_batch_job(
         lookup_path = ROOT / lookup_path
     md_lookup_table = load_lookup_table(lookup_path)
     logging.info(f"Preloaded MD lookup table from {lookup_path} ({len(md_lookup_table.available_feb_ids)} FEBs).")
+
+    # Preload DuplicateRejectLog history once for all showers in this batch job (if duplicate filter enabled)
+    slt_p = config.get("slt_params", {})
+    duplicate_filter_enable = bool(slt_p.get("duplicate_filter_enable", False))
+    duplicate_history = None
+    if duplicate_filter_enable or duplicate_reject_log_file is not None:
+        if duplicate_reject_log_file is None:
+            duplicate_reject_log_file = input_sources.get("duplicate_reject_log") or slt_p.get("duplicate_reject_log")
+        if duplicate_reject_log_file is None:
+            raise ValueError(
+                "Duplicate reject log must be specified via --duplicate_reject_log_file or "
+                "config['input_sources']['duplicate_reject_log'] when duplicate_filter_enable is True."
+            )
+        dup_log_path = Path(duplicate_reject_log_file)
+        if not dup_log_path.is_absolute():
+            dup_log_path = ROOT / dup_log_path
+        duplicate_history = load_duplicate_history(dup_log_path)
+        logging.info(
+            f"Preloaded DuplicateRejectLog from {dup_log_path} ({len(duplicate_history)} events, "
+            f"range=[{duplicate_history.min_timestamp}, {duplicate_history.max_timestamp}])."
+        )
 
     # Read manifest rows into a list of dicts
     rows = []
@@ -115,6 +138,7 @@ def run_batch_job(
             out_file=str(shower_out_file),
             config=config,
             md_lookup_table_file=md_lookup_table,
+            duplicate_reject_log_file=duplicate_history,
             t_start=t_start,
             t_end=t_end,
             t_step=t_step,
@@ -150,6 +174,12 @@ if __name__ == "__main__":
         help="Path to MD lookup table file (defaults to config input_sources.md_lookup_table).",
     )
     parser.add_argument(
+        "--duplicate_reject_log_file",
+        type=str,
+        default=None,
+        help="Path to DuplicateRejectLog file (defaults to config input_sources.duplicate_reject_log).",
+    )
+    parser.add_argument(
         "--t_start",
         type=float,
         default=None,
@@ -180,6 +210,7 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         manifest_csv=args.manifest_csv,
         md_lookup_table_file=args.md_lookup_table_file,
+        duplicate_reject_log_file=args.duplicate_reject_log_file,
         t_start=args.t_start,
         t_end=args.t_end,
         t_step=args.t_step,

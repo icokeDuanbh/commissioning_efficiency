@@ -36,7 +36,11 @@ if str(SLT_DIR) not in sys.path:
     sys.path.insert(0, str(SLT_DIR))
 
 from build_slt_pipeline import build_library
-from load_duplicate_history import parse_duplicate_reject_log
+from load_duplicate_history import (
+    DuplicateRejectHistory,
+    load_duplicate_history,
+    parse_duplicate_reject_log,
+)
 import ctypes
 import numpy as np
 
@@ -212,28 +216,42 @@ class SLTPipeline:
             "window_timestamps":  wts_out[:wtc].copy(),
         }
 
+    def reset_duplicate_history(self) -> None:
+        """Clear T3Filter duplicate history_ and prev_pairs_ state."""
+        ret = self._lib.slt_pipeline_reset_history(self._handle)
+        if ret != 0:
+            raise RuntimeError("slt_pipeline_reset_history failed.")
+
     def preload_duplicate_history(
         self,
-        log_file: str,
+        log_file,
         n_events: int = None,
+        target_timestamp: float = None,
+        reset: bool = True,
     ) -> int:
-        """Seed the C++ duplicate-filter history from a DuplicateRejectLog file.
+        """Seed the C++ duplicate-filter history from a DuplicateRejectLog.
 
-        Reads the first ``n_events`` (or ``duplicate_history_size`` if
-        unspecified) events from *log_file* and pushes their pair-time-
-        difference fingerprints directly into ``T3Filter::history_``,
-        bypassing nhit / causal / template-match cuts entirely.
-
-        This must be called **before** the first ``run()`` call so that the
-        duplicate filter has a warm history from the moment injection starts.
+        When ``target_timestamp`` is provided, selects the past ``n_events``
+        events with ``timestamp <= target_timestamp`` from *log_file* (raising
+        ``ValueError`` if fewer than ``n_events`` exist prior to it).  When
+        ``target_timestamp`` is ``None``, reads the first ``n_events`` events
+        from the start of *log_file*.
 
         Parameters
         ----------
         log_file:
-            Path to a ``DuplicateRejectLog_*.log`` file from the online DAQ.
+            Path to a ``DuplicateRejectLog_*.log`` file (or directory of logs)
+            or a preloaded ``DuplicateRejectHistory`` object.
         n_events:
-            How many events (from the start of the file) to seed.  Defaults
-            to ``duplicate_history_size`` as set at pipeline construction.
+            How many events to seed.  Defaults to ``duplicate_history_size``
+            as set at pipeline construction.
+        target_timestamp:
+            Timestamp (in seconds) of the simulated event.  If given, the past
+            ``n_events`` events immediately preceding ``target_timestamp`` are
+            seeded.
+        reset:
+            If ``True`` (default), clears ``T3Filter::history_`` and
+            ``T3Filter::prev_pairs_`` before seeding.
 
         Returns
         -------
@@ -245,7 +263,14 @@ class SLTPipeline:
             # We stored it as an attribute during __init__.
             n_events = self._duplicate_history_size
 
-        events = parse_duplicate_reject_log(log_file, max_events=n_events)
+        if reset:
+            self.reset_duplicate_history()
+
+        events = parse_duplicate_reject_log(
+            log_file,
+            max_events=n_events,
+            target_timestamp=target_timestamp,
+        )
 
         seeded = 0
         for hits in events:
@@ -287,6 +312,9 @@ class SLTPipeline:
 
         lib.slt_pipeline_destroy.restype  = None
         lib.slt_pipeline_destroy.argtypes = [ctypes.c_void_p]
+
+        lib.slt_pipeline_reset_history.restype  = ctypes.c_int
+        lib.slt_pipeline_reset_history.argtypes = [ctypes.c_void_p]
 
         lib.slt_pipeline_seed_history.restype  = ctypes.c_int
         lib.slt_pipeline_seed_history.argtypes = [
