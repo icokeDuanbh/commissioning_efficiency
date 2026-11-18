@@ -52,7 +52,7 @@ def process_event(
     fname_duplicate_log=None,
     flt0_params: dict = None,
     flt1_score_min: float = 0.0,
-    min_flt1_dus: int = 1,
+    min_flt1_dus: int = 5,
     use_python_flt0: bool = True,
     if_filter: bool = True,
 ):
@@ -302,7 +302,7 @@ def process_event(
     # =========================================================================
     # Step 4: Apply SLT (Second Level Trigger) Pipeline
     # =========================================================================
-    du_ids_arr = np.array(flt1_dus, dtype=np.uint32)
+    du_ids_arr = np.array([du_to_feb.get(du_id) for du_id in flt1_dus], dtype=np.uint32) # so that in the causality cut we use FEB IDs (and I think it’s also needed for the fingerprint cut)
     timestamps_arr = np.array(flt1_timestamps, dtype=np.uint64)
     scores_arr = np.array(flt1_scores, dtype=np.uint16)
 
