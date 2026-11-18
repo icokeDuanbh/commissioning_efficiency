@@ -123,6 +123,16 @@ public:
                                                   uint64_t tm_id = 0,
                                                   uint64_t bucket_timestamp_ns = 0);
 
+    // Reset the duplicate-filter state (clears both history_ and prev_pairs_).
+    // Returns true if t3_filter_ exists and was reset, false otherwise.
+    bool resetDuplicateHistory() {
+        if (!t3_filter_) {
+            return false;
+        }
+        t3_filter_->reset();
+        return true;
+    }
+
     // Seed the duplicate-filter history with one event's hits.
     // Computes the PTD fingerprint from the flat arrays and pushes it
     // directly into T3Filter::history_, bypassing nhit/causal/template-match.

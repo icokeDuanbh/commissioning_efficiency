@@ -58,6 +58,16 @@ extern "C" void slt_pipeline_destroy(void* handle) {
     delete static_cast<grand::TriggerPipeline*>(handle);
 }
 
+// Reset the duplicate-filter history and prev_pairs_ state in T3Filter.
+// Returns 0 on success, -1 on bad arguments (null handle or null t3_filter_).
+extern "C" int slt_pipeline_reset_history(void* handle) {
+    if (!handle) {
+        return -1;
+    }
+    auto* pipeline = static_cast<grand::TriggerPipeline*>(handle);
+    return pipeline->resetDuplicateHistory() ? 0 : -1;
+}
+
 // Seed the duplicate-filter history with one event's hits.
 //
 // Computes the pair-time-difference fingerprint from the flat
