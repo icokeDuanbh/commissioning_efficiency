@@ -365,9 +365,6 @@ def process_event(
     final_triggered = bool(slt_result.get("triggered", False))
     logging.info(f"SLT Pipeline Final Decision: Triggered = {final_triggered}")
 
-    if "reason" not in slt_result:
-        slt_result["reason"] = "Passed" if final_triggered else "SLTRejected"
-
     return {
         "triggered": final_triggered,
         "n_du_total": n_du,

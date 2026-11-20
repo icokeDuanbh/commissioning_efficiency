@@ -111,6 +111,12 @@ extern "C" int slt_pipeline_seed_history(
 //   out_window_du_ids  uint32  pre-filter window DU IDs    [max_items]
 //   out_window_ts_count scalar number of pre-filter window timestamps written
 //   out_window_ts      uint64  pre-filter window timestamps [max_items]
+//   out_reject_reason  int     rejection reason code (nullable):
+//                               0 = NhitBelowThreshold (window never reached nhit)
+//                               1 = Duplicate
+//                               2 = CausalSubsetTooSmall
+//                               3 = TemplateMatchBelowThreshold
+//                             Only meaningful when return value is 0 (not triggered).
 //
 // Returns:
 //   1  triggered (nhit met + T3Filter passed)
@@ -133,7 +139,8 @@ extern "C" int slt_pipeline_run(
     int*            out_window_du_count,
     uint32_t*       out_window_du_ids,
     int*            out_window_ts_count,
-    uint64_t*       out_window_ts
+    uint64_t*       out_window_ts,
+    int*            out_reject_reason   // nullable; 0 = NhitBelowThreshold
 ) {
     if (!handle || !du_ids || !timestamps_ns || !related_values || n_hits <= 0) {
         return -1;
@@ -153,11 +160,22 @@ extern "C" int slt_pipeline_run(
         pipeline->testOnly_collectTriggerResults(hits, tm_id, bucket_timestamp_ns);
 
     if (results.empty()) {
-        return 0;   // not triggered
+        // nhit threshold was never met
+        if (out_reject_reason) *out_reject_reason = 0;
+        return 0;
     }
 
     // We only care about the first result (single-event assumption).
     const grand::TriggerResult& r = results[0];
+
+    if (!r.triggered) {
+        // nhit was met but T3Filter rejected the event
+        if (out_reject_reason) *out_reject_reason = r.reject_reason_code;
+        return 0;
+    }
+
+    // Triggered: write output arrays
+    if (out_reject_reason) *out_reject_reason = 0;
 
     // Post-filter DUs
     int dc = static_cast<int>(r.du_ids.size());
@@ -211,13 +229,17 @@ int main() {
     uint64_t ts_out[N] = {}, wts_out[N] = {};
 
     uint16_t rv[] = {0, 0, 0, 0, 0};  // no template-match filter in this test
+    int reject_reason = 0;
     int ret = slt_pipeline_run(h, du, ts, rv, 5, 1000ULL, 1000000000ULL,
-                               N, &dc, du_out, ts_out, &wdc, wdu_out, &wtc, wts_out);
-    std::printf("Run 1: ret=%d  du_count=%d\n", ret, dc);
+                               N, &dc, du_out, ts_out, &wdc, wdu_out, &wtc, wts_out,
+                               &reject_reason);
+    std::printf("Run 1: ret=%d  du_count=%d  reject_reason=%d\n", ret, dc, reject_reason);
 
+    reject_reason = 0;
     ret = slt_pipeline_run(h, du, ts, rv, 5, 1001ULL, 2000000000ULL,
-                           N, &dc, du_out, ts_out, &wdc, wdu_out, &wtc, wts_out);
-    std::printf("Run 2 (duplicate): ret=%d  du_count=%d\n", ret, dc);
+                           N, &dc, du_out, ts_out, &wdc, wdu_out, &wtc, wts_out,
+                           &reject_reason);
+    std::printf("Run 2 (duplicate): ret=%d  du_count=%d  reject_reason=%d\n", ret, dc, reject_reason);
 
     slt_pipeline_destroy(h);
 }

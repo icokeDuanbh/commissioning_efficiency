@@ -55,6 +55,11 @@ struct TriggerResult {
     std::vector<uint64_t> trigger_timestamps; // 与各 DU 对齐的触发时刻（T3Filter 后）
     std::vector<uint64_t> window_timestamps;  // 全窗口 hit timestamps（T3Filter 之前），供 DOTRIGGER 使用
     std::vector<uint32_t> window_du_ids;      // 全窗口 distinct DU IDs，供 DOTRIGGER 发送目标使用
+    // Rejection reason when triggered==false and nhit threshold was met.
+    // Maps to T3FilterRejectReason: 0=None/Passed, 1=Duplicate,
+    // 2=CausalSubsetTooSmall, 3=TemplateMatchBelowThreshold.
+    // Remains 0 when nhit threshold was not met (window never reached threshold).
+    int reject_reason_code = 0;
 };
 
 using TriggerCallback = std::function<void(const TriggerResult&, const TmIdBucket&)>;

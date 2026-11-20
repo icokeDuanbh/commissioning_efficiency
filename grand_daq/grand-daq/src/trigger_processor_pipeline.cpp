@@ -532,6 +532,16 @@ TriggerResults TriggerPipeline::collectTriggerResults(const std::vector<Hit>& hi
                 continue;
             }
 
+            // nhit threshold was met but T3Filter rejected: record rejection reason
+            // in a placeholder TriggerResult so the caller can retrieve it.
+            {
+                TriggerResult rejected;
+                rejected.tm_id = tm_id;
+                rejected.triggered = false;
+                rejected.reject_reason_code = static_cast<int>(filter_decision.reject_reason);
+                results.push_back(std::move(rejected));
+            }
+
             const std::size_t last_idx = j_end - 1;
             for (std::size_t k = i; k <= last_idx && k < n; ++k) {
                 removeHitFromWindowFront(sorted_hits[k]);

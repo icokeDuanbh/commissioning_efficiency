@@ -159,6 +159,8 @@ class SLTPipeline:
         -------
         dict with keys:
             triggered          bool   — True if nhit met and T3Filter passed
+            reason             str    — "Passed", "NhitBelowThreshold", "Duplicate",
+                                        "CausalSubsetTooSmall", or "TemplateMatchBelowThreshold"
             du_ids             ndarray uint32 — post-filter DU IDs
             trigger_timestamps ndarray uint64 — post-filter timestamps (ns)
             window_du_ids      ndarray uint32 — pre-filter window DU IDs
@@ -179,6 +181,7 @@ class SLTPipeline:
         du_count    = ctypes.c_int(0)
         wdu_count   = ctypes.c_int(0)
         wts_count   = ctypes.c_int(0)
+        reject_reason = ctypes.c_int(0)
         du_ids_out  = np.zeros(I, dtype=np.uint32)
         trig_ts_out = np.zeros(I, dtype=np.uint64)
         wdu_out     = np.zeros(I, dtype=np.uint32)
@@ -200,16 +203,31 @@ class SLTPipeline:
             _ptr(wdu_out,     ctypes.c_uint32),
             ctypes.byref(wts_count),
             _ptr(wts_out,     ctypes.c_uint64),
+            ctypes.byref(reject_reason),
         )
 
         if ret == -1:
             raise RuntimeError("slt_pipeline_run: bad arguments passed to C++")
 
+        _REJECT_REASON_MAP = {
+            0: "NhitBelowThreshold",
+            1: "Duplicate",
+            2: "CausalSubsetTooSmall",
+            3: "TemplateMatchBelowThreshold",
+        }
+
+        triggered = (ret == 1)
+        if triggered:
+            reason = "Passed"
+        else:
+            reason = _REJECT_REASON_MAP.get(reject_reason.value, f"Unknown({reject_reason.value})")
+
         dc  = du_count.value
         wdc = wdu_count.value
         wtc = wts_count.value
         return {
-            "triggered":          ret == 1,
+            "triggered":          triggered,
+            "reason":             reason,
             "du_ids":             du_ids_out[:dc].copy(),
             "trigger_timestamps": trig_ts_out[:dc].copy(),
             "window_du_ids":      wdu_out[:wdc].copy(),
@@ -341,6 +359,7 @@ class SLTPipeline:
             ctypes.POINTER(ctypes.c_uint32),   # out_window_du_ids
             ctypes.POINTER(ctypes.c_int),      # out_window_ts_count
             ctypes.POINTER(ctypes.c_uint64),   # out_window_ts
+            ctypes.POINTER(ctypes.c_int),      # out_reject_reason (nullable)
         ]
 
 
