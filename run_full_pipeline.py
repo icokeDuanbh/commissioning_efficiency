@@ -181,6 +181,7 @@ def process_event(
     # =========================================================================
     logging.info(f"--- Event {i_sim}: Running FLT0 on {n_du} DUs (Python backend: {use_python_flt0}) ---")
     flt0_triggered = np.zeros(n_du, dtype=bool)
+    flt0_ch_triggered = np.zeros((n_du, 2), dtype=bool)
 
     # Loop over the simulated DU IDs (they may be discontinuous, e.g. 0, 2, 10, 20).
     # i_du indexes the trace array; du_id is the real DU ID used to find the FEB.
@@ -198,8 +199,7 @@ def process_event(
             )
             continue
 
-        triggered_du = False
-        # Evaluate channels (X and Y are always channels 0 and 1)
+        # Evaluate both channels (X and Y are always channels 0 and 1) without early break
         for i_ch in range(2):
             th1, th2 = du_thresholds[i_ch]
             trace = trace_filtered[i_du][i_ch]
@@ -235,10 +235,9 @@ def process_event(
                 )
 
             logging.debug(f"  FLT0: Finished DU{i_du}-Ch{i_ch}/{n_du}, trigger {trig}")
-            if trig:
-                triggered_du = True
-                break
-        flt0_triggered[i_du] = triggered_du
+            flt0_ch_triggered[i_du][i_ch] = bool(trig)
+
+        flt0_triggered[i_du] = bool(flt0_ch_triggered[i_du][0] or flt0_ch_triggered[i_du][1])
 
     flt0_survivor_indices = np.where(flt0_triggered)[0]
     n_flt0_passed = len(flt0_survivor_indices)
@@ -250,36 +249,81 @@ def process_event(
     flt1_dus = []
     flt1_scores = []
     flt1_timestamps = []
+    flt_results = []
 
-    for i_du in flt0_survivor_indices:
-        i_du = int(i_du)
-        du_id = sim_du_ids[i_du]
-        ts_ns = sim_du_nsec[i_du]  # Only take nanoseconds for 1-second bucket granularity
+    # Map DU channels to FLT trigger outcomes
+    # Possible outcomes per channel: "FLT0", "FLT_SUPPRESSED", "FLT1", True
+    for i_du, du_id in enumerate(sim_du_ids):
+        ch0_flt0 = bool(flt0_ch_triggered[i_du][0])
+        ch1_flt0 = bool(flt0_ch_triggered[i_du][1])
+        ts_ns = sim_du_nsec[i_du]
 
-        ch1_trace = trace_filtered[i_du][0].astype(np.int16)
-        ch2_trace = trace_filtered[i_du][1].astype(np.int16)
-        ch3_trace = trace_filtered[i_du][2].astype(np.int16)
-        ch4_trace = np.zeros_like(ch1_trace, dtype=np.int16)
+        # Case 1: DU did not pass FLT0 on either channel
+        if not (ch0_flt0 or ch1_flt0):
+            flt_results.append([du_id, "X", "FLT0"])
+            flt_results.append([du_id, "Y", "FLT0"])
+            continue
+
+        # Case 2: DU survived FLT0 -> evaluate FLT1
+        # Set trigger pattern according to which channel(s) passed FLT0:
+        #   512: ChX only
+        #   1024: ChY only
+        #   1536: Both passed FLT0 (C++ scope_t2 evaluates both and selects higher correlation)
+        if ch0_flt0 and not ch1_flt0:
+            trigger_pattern = 512
+        elif not ch0_flt0 and ch1_flt0:
+            trigger_pattern = 1024
+        else:
+            trigger_pattern = 1536
+
+        # Trace mapping for call_scope_t2_py:
+        # custom_trace_ch1: unused / empty
+        # custom_trace_ch2: Channel X (trace_filtered[i_du][0])
+        # custom_trace_ch3: Channel Y (trace_filtered[i_du][1])
+        # custom_trace_ch4: Channel Z (trace_filtered[i_du][2])
+        ch_x_trace = trace_filtered[i_du][0].astype(np.int16)
+        ch_y_trace = trace_filtered[i_du][1].astype(np.int16)
+        ch_z_trace = trace_filtered[i_du][2].astype(np.int16) if trace_filtered.shape[1] > 2 else np.zeros_like(ch_x_trace)
+        empty_trace = np.zeros_like(ch_x_trace)
 
         ret, out0, out1, out_size = run_FLT1.call_scope_t2_py(
-            trigger_pattern=1000,
+            trigger_pattern=trigger_pattern,
             t_pre_coincidence_ch2=1036,
             t_pre_coincidence_ch3=1036,
             t_period_reg_ch2=10,
             t_period_reg_ch3=10,
-            custom_trace_ch1=ch1_trace,
-            custom_trace_ch2=ch2_trace,
-            custom_trace_ch3=ch3_trace,
-            custom_trace_ch4=ch4_trace,
+            custom_trace_ch1=empty_trace,
+            custom_trace_ch2=ch_x_trace,
+            custom_trace_ch3=ch_y_trace,
+            custom_trace_ch4=ch_z_trace,
         )
 
         # Scale out0 uint16 score to float (0.0 to 1.0)
         norm_score = float(out0) / 65535.0 if out0 is not None else 0.0
+        flt1_passed = (norm_score > flt1_score_min)
 
-        if norm_score > flt1_score_min:
+        if flt1_passed:
             flt1_dus.append(du_id)
-            flt1_scores.append(out0) # Keep uint16 score for SLT input
+            flt1_scores.append(out0)  # Keep uint16 score for SLT input
             flt1_timestamps.append(ts_ns)
+
+        # Assign per-channel trigger results based on C++ selected channel (out1: 2 for X, 3 for Y)
+        if ch0_flt0 and ch1_flt0:
+            if out1 == 2:
+                res_x = True if flt1_passed else "FLT1"
+                res_y = "FLT_SUPPRESSED"
+            else:  # out1 == 3
+                res_x = "FLT_SUPPRESSED"
+                res_y = True if flt1_passed else "FLT1"
+        elif ch0_flt0 and not ch1_flt0:
+            res_x = True if flt1_passed else "FLT1"
+            res_y = "FLT0"
+        else:  # not ch0_flt0 and ch1_flt0
+            res_x = "FLT0"
+            res_y = True if flt1_passed else "FLT1"
+
+        flt_results.append([du_id, "X", res_x])
+        flt_results.append([du_id, "Y", res_y])
 
     n_flt1_passed = len(flt1_dus)
     logging.info(f"FLT1 passed (correlation > {flt1_score_min}) for {n_flt1_passed} DUs.")
@@ -294,7 +338,13 @@ def process_event(
             "n_du_total": n_du,
             "n_flt0_passed": n_flt0_passed,
             "n_flt1_passed": n_flt1_passed,
-            "slt_result": None,
+            "flt_results": flt_results,
+            "slt_result": {
+                "triggered": False,
+                "reason": "PreselectionFailed",
+                "n_flt1_passed": n_flt1_passed,
+                "min_required": min_flt1_dus,
+            },
         }
 
     logging.info(f"Preselection PASSED ({n_flt1_passed} DUs >= {min_flt1_dus}). Proceeding to SLT.")
@@ -315,11 +365,15 @@ def process_event(
     final_triggered = bool(slt_result.get("triggered", False))
     logging.info(f"SLT Pipeline Final Decision: Triggered = {final_triggered}")
 
+    if "reason" not in slt_result:
+        slt_result["reason"] = "Passed" if final_triggered else "SLTRejected"
+
     return {
         "triggered": final_triggered,
         "n_du_total": n_du,
         "n_flt0_passed": n_flt0_passed,
         "n_flt1_passed": n_flt1_passed,
+        "flt_results": flt_results,
         "slt_result": slt_result,
     }
 
