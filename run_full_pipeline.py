@@ -153,6 +153,7 @@ def process_event(
         fname_MD_lookup_table,
         sim_timestamp=sim_timestamp,
         fname_DU_to_FEB=du_to_feb,
+        calib_dir="/share07/users/t/tianxs/calibration"
     )
 
     if not sim_du_ids:
@@ -381,7 +382,7 @@ if __name__ == "__main__":
     # Initialize SLT pipeline
     slt_pipeline = run_SLT.SLTPipeline(
         trigger_type=2,               # nhit + causal window + T3Filter
-        nhit_threshold=5,
+        nhit_threshold=2,
         time_window_ns=15_000,
         causal_window_enabled=True,
         antenna_distances_file=distances_file,
@@ -395,7 +396,8 @@ if __name__ == "__main__":
     # Optionally warm up the duplicate-filter history from a reject log.
     # Set duplicate_history_file to the path of a DuplicateRejectLog_*.log
     # file downloaded from the online DAQ for the run being simulated.
-    duplicate_history_file = str(ROOT / "test_data/duplicate_library/DuplicateRejectLog_10439_20260902_064452.log")
+    # BOHAO, fingerprint
+    duplicate_history_file = str("/sharegp/home/duanbh/sdb2/duanbh/comissioning_efficiency/data/202609/fingerprint/01/DuplicateRejectLog_10438_20260901_084336.log")
     if duplicate_history_file:
         n_seeded = slt_pipeline.preload_duplicate_history(duplicate_history_file)
         print(f"Seeded {n_seeded} events into the duplicate-cut history.")

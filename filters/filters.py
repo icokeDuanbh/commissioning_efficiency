@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from numba import njit
 
-def get_coefficients_from_xci(xci_path="fir_compiler_lp_120M.xci"):
+def get_coefficients_from_xci(xci_path="/sharegp/home/duanbh/sdb2/duanbh/comissioning_efficiency/pipeline/commissioning_efficiency/filters/fir_compiler_lp_120M.xci"):
     """Parses the CoefficientVector from the Xilinx XCI file."""
     tree = ET.parse(xci_path)
     root = tree.getroot()

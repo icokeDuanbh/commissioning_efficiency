@@ -32,7 +32,7 @@ def build_library() -> Path:
         return LIB_PATH
 
     cmd = [
-        "clang++",
+        "g++",
         "-std=c++17",
         "-shared",
         "-fPIC",

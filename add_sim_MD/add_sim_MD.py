@@ -1,6 +1,7 @@
 from pathlib import Path
 from grand.dataio import DataFile
 import numpy as np
+import ROOT
 import logging
 from .lookup_table import MDLookupTable, load_lookup_table, load_du_to_feb_map
 
@@ -115,10 +116,41 @@ def add_sim_md(
     file_cache = {}
     calib_cache = {}
 
-    def _get_df(path_str):
+    def _read_md_trace(path_str, entry_index):
         if path_str not in file_cache:
-            file_cache[path_str] = DataFile(path_str)
-        return file_cache[path_str]
+            md_file = ROOT.TFile.Open(str(path_str), "READ")
+            if not md_file or md_file.IsZombie():
+                raise OSError(f"Cannot open MD ROOT file: {path_str}")
+            tree = md_file.Get("teventadc")
+            split_traces = bool(tree)
+            branches = ("trace_1", "trace_2", "trace_3") if split_traces else ("trace_ch",)
+            if not split_traces:
+                tree = md_file.Get("tadc")
+            if (not tree or not tree.InheritsFrom("TTree")
+                    or any(not tree.GetBranch(name) for name in branches)):
+                md_file.Close()
+                raise ValueError(f"Missing MD ADC tree or waveform branches {branches}: {path_str}")
+            # Read the waveform without assigning unrelated GRANDlib fields.
+            tree.SetBranchStatus("*", 0)
+            for name in branches:
+                tree.SetBranchStatus(name + "*", 1)
+            file_cache[path_str] = (md_file, tree, split_traces)
+
+        _, tree, split_traces = file_cache[path_str]
+        entry_index = int(entry_index)
+        if not 0 <= entry_index < tree.GetEntries() or tree.GetEntry(entry_index) <= 0:
+            raise OSError(f"Cannot read MD entry {entry_index}: {path_str}")
+        if split_traces:
+            channels = (tree.trace_1, tree.trace_2, tree.trace_3)
+            if any(len(channel) != 1 for channel in channels):
+                raise ValueError(
+                    f"Expected one DU per MD entry in teventadc. Entry {entry_index}: {path_str}"
+                )
+            return tuple(np.array(channel[0], copy=True) for channel in channels)
+        traces = tree.trace_ch
+        if len(traces) == 0 or len(traces[0]) < 4:
+            raise ValueError(f"MD entry {entry_index} lacks channels 1–3: {path_str}")
+        return tuple(np.array(traces[0][ch], copy=True) for ch in (1, 2, 3))
 
     def _get_calib(feb_id, pol):
         key = (feb_id, pol)
@@ -158,29 +190,15 @@ def add_sim_md(
 
             fname_prev, i_MD_prev, fname_next, i_MD_next = md_info
 
-            df_prev = _get_df(fname_prev)
-            df_prev.tadc.get_entry(i_MD_prev)
-            length_MD = len(df_prev.tadc.trace_ch[0][1])
+            trace_md_x, trace_md_y, trace_md_z = _read_md_trace(fname_prev, i_MD_prev)
+            length_MD = len(trace_md_x)
 
-            if length_MD == length_sim:
-                trace_md_x = np.array(df_prev.tadc.trace_ch[0][1])
-                trace_md_y = np.array(df_prev.tadc.trace_ch[0][2])
-                trace_md_z = np.array(df_prev.tadc.trace_ch[0][3])
-            elif length_MD == length_sim // 2:
-                trace_md_x_prev = np.array(df_prev.tadc.trace_ch[0][1])
-                trace_md_y_prev = np.array(df_prev.tadc.trace_ch[0][2])
-                trace_md_z_prev = np.array(df_prev.tadc.trace_ch[0][3])
-
-                df_next = _get_df(fname_next)
-                df_next.tadc.get_entry(i_MD_next)
-                trace_md_x_next = np.array(df_next.tadc.trace_ch[0][1])
-                trace_md_y_next = np.array(df_next.tadc.trace_ch[0][2])
-                trace_md_z_next = np.array(df_next.tadc.trace_ch[0][3])
-
-                trace_md_x = np.concatenate((trace_md_x_prev, trace_md_x_next), axis=0)
-                trace_md_y = np.concatenate((trace_md_y_prev, trace_md_y_next), axis=0)
-                trace_md_z = np.concatenate((trace_md_z_prev, trace_md_z_next), axis=0)
-            else:
+            if length_MD * 2 == length_sim:
+                next_x, next_y, next_z = _read_md_trace(fname_next, i_MD_next)
+                trace_md_x = np.concatenate((trace_md_x, next_x))
+                trace_md_y = np.concatenate((trace_md_y, next_y))
+                trace_md_z = np.concatenate((trace_md_z, next_z))
+            if any(len(trace) != length_sim for trace in (trace_md_x, trace_md_y, trace_md_z)):
                 raise ValueError(
                     f"Unsupported MD trace length ({length_MD}) for FEB {target_feb_id} with sim length ({length_sim})."
                 )
@@ -193,9 +211,9 @@ def add_sim_md(
             trace_added[i_du][2] = trace_md_z + file_sim.tadc.trace_ch[i_du][2]
 
     finally:
-        for df in file_cache.values():
+        for md_file, _, _ in file_cache.values():
             try:
-                df.close()
+                md_file.Close()
             except Exception:
                 pass
         file_sim.close()

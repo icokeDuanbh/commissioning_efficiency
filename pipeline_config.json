@@ -1,0 +1,44 @@
+{
+  "description": "FLT0 -> FLT1 -> SLT Trigger Simulation Run",
+  "created_at": "2026-08-04T16:49:00",
+  "filter_params": {
+    "if_filter": false,
+    "notch_freq_hz": 39000000.0,
+    "notch_radius_r": 0.9,
+    "filter_type": "notch + fir"
+  },
+  "flt0_params": {
+    "th1": 149,
+    "th2": 135,
+    "t_quiet": 200,
+    "t_period": 500,
+    "t_sepmax": 25,
+    "nc_min": 2,
+    "nc_max": 9,
+    "use_python_flt0": true
+  },
+  "flt1_params": {
+    "flt1_score_min": 0.5,
+    "trigger_pattern": 1000,
+    "t_pre_coincidence_ch2": 1036,
+    "t_pre_coincidence_ch3": 1036,
+    "t_period_reg_ch2": 10,
+    "t_period_reg_ch3": 10,
+    "min_flt1_dus": 1
+  },
+  "slt_params": {
+    "trigger_type": 2,
+    "nhit_threshold": 5,
+    "time_window_ns": 15000,
+    "causal_window_enabled": false,
+    "antenna_distances_file": "grand_daq/grand-daq/cfgs/detector_distances_May24_v2.txt",
+    "template_match_filter_enable": true,
+    "template_match_coefficient": 0.7,
+    "duplicate_filter_enable": false
+  },
+  "input_sources": {
+    "sim_manifest_csv": "results/sim_manifest.csv",
+    "md_entry_file": "results/md_entries_global_1086.txt",
+    "target_du_id": 1086
+  }
+}
