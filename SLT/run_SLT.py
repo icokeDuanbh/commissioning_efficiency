@@ -246,6 +246,7 @@ class SLTPipeline:
         n_events: int = None,
         target_timestamp: float = None,
         reset: bool = True,
+        max_age_seconds: float = None,
     ) -> int:
         """Seed the C++ duplicate-filter history from a DuplicateRejectLog.
 
@@ -270,6 +271,8 @@ class SLTPipeline:
         reset:
             If ``True`` (default), clears ``T3Filter::history_`` and
             ``T3Filter::prev_pairs_`` before seeding.
+        max_age_seconds:
+            Optional lookback window. Allows seeding fewer than n_events.
 
         Returns
         -------
@@ -288,6 +291,7 @@ class SLTPipeline:
             log_file,
             max_events=n_events,
             target_timestamp=target_timestamp,
+            max_age_seconds=max_age_seconds,
         )
 
         seeded = 0

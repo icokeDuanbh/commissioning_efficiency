@@ -146,11 +146,17 @@ def add_sim_md(
                 raise ValueError(
                     f"Expected one DU per MD entry in teventadc. Entry {entry_index}: {path_str}"
                 )
-            return tuple(np.array(channel[0], copy=True) for channel in channels)
+            return tuple(
+                np.fromiter(channel[0], dtype=np.int32, count=len(channel[0]))
+                for channel in channels
+            )
         traces = tree.trace_ch
         if len(traces) == 0 or len(traces[0]) < 4:
             raise ValueError(f"MD entry {entry_index} lacks channels 1–3: {path_str}")
-        return tuple(np.array(traces[0][ch], copy=True) for ch in (1, 2, 3))
+        return tuple(
+            np.fromiter(waveform, dtype=np.int32, count=len(waveform))
+            for waveform in (traces[0][1], traces[0][2], traces[0][3])
+        )
 
     def _get_calib(feb_id, pol):
         key = (feb_id, pol)
@@ -229,3 +235,4 @@ if __name__ == "__main__":
 
     trace_added, n_du = add_sim_md(test_file_sim, i_sim, test_lookup_table, sim_timestamp=1782725975.0)
     print(f"[DU-dependent Mode] {n_du} DUs in event. Shape: {trace_added.shape}")
+

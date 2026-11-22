@@ -232,6 +232,7 @@ def parse_duplicate_reject_log(
     path: Union[str, Path, DuplicateRejectHistory],
     max_events: Optional[int] = None,
     target_timestamp: Optional[float] = None,
+    max_age_seconds: Optional[float] = None,
 ) -> List[Event]:
     """Parse a DuplicateRejectLog file (or query a preloaded history).
 
@@ -249,6 +250,9 @@ def parse_duplicate_reject_log(
         If provided, select the past ``max_events`` events with
         ``timestamp <= target_timestamp``.  Raises ``ValueError`` if fewer than
         ``max_events`` events exist prior to ``target_timestamp``.
+    max_age_seconds:
+        When set, only use events within this many seconds before the target.
+        The result may contain fewer than max_events, including zero.
 
     Returns
     -------
@@ -260,6 +264,15 @@ def parse_duplicate_reject_log(
         if max_events is None:
             raise ValueError("max_events (N) must be specified when target_timestamp is provided.")
         history = load_duplicate_history(path)
+        if max_age_seconds is not None:
+            if not np.isfinite(max_age_seconds) or max_age_seconds <= 0 or max_events <= 0:
+                raise ValueError("max_age_seconds and max_events must be positive.")
+            target = float(target_timestamp)
+            if not np.isfinite(target):
+                raise ValueError("target_timestamp must be finite.")
+            first = int(np.searchsorted(history.timestamps, target - max_age_seconds, side="left"))
+            end = int(np.searchsorted(history.timestamps, target, side="right"))
+            return history.events[max(first, end - max_events):end]
         return history.get_past_events(target_timestamp=target_timestamp, n_events=max_events)
 
     if _is_duplicate_history_obj(path):

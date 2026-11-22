@@ -138,10 +138,14 @@ def process_event(
             fname_duplicate_log,
             target_timestamp=float(sim_timestamp),
             reset=True,
+            max_age_seconds=60,
         )
-        logging.debug(
-            f"--- Event {i_sim}: Seeded {n_seeded} past duplicate-reject events for sim_timestamp={sim_timestamp:.9f}s ---"
-        )
+        if n_seeded:
+            logging.info("Event %s: loaded %s fingerprint records from the last 60 s.",
+                         i_sim, n_seeded)
+        else:
+            logging.info("Event %s: no usable fingerprint history in the last 60 s.",
+                         i_sim)
 
     # =========================================================================
     # Step 1 & 2: Read event and add MD background noise
@@ -382,7 +386,7 @@ if __name__ == "__main__":
     # Initialize SLT pipeline
     slt_pipeline = run_SLT.SLTPipeline(
         trigger_type=2,               # nhit + causal window + T3Filter
-        nhit_threshold=2,
+        nhit_threshold=5,
         time_window_ns=15_000,
         causal_window_enabled=True,
         antenna_distances_file=distances_file,
